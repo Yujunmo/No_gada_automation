@@ -27,42 +27,45 @@ def extract_tables(sql: str) -> list[str]:
 
     try:
         statements = sqlglot.parse(sql, dialect="oracle")
-        print(statements)
+        print(len(statements))
+
     except sqlglot.errors.ParseError as e:
         raise ExtractionError(_format_parse_error(e)) from e
 
-    non_empty = [s for s in statements if s is not None]
-    if len(non_empty) == 0:
+    non_empty_trees = [s for s in statements if s is not None]
+    if len(non_empty_trees) == 0:
         raise ExtractionError("No valid SQL statement found")
-    if len(non_empty) > 1:
-        raise ExtractionError(
-            f"Multiple statements not supported (found {len(non_empty)})"
-        )
-    tree = non_empty[0]
-
-    if not isinstance(tree, VALID_TOP_LEVEL):
-        raise ExtractionError(
-            f"Unsupported or invalid SQL statement (got {type(tree).__name__})"
-        )
-
-    cte_names = {
-        (cte.alias or "").upper()
-        for cte in tree.find_all(exp.CTE)
-        if cte.alias
-    }
-
+    
     tables: set[str] = set()
-    for t in tree.find_all(exp.Table):
-        name = (t.name or "").upper().split("@", 1)[0]
-        if not name:
-            continue
-        if name in cte_names:
-            continue
-        if name in EXCLUDED_EXACT:
-            continue
-        if any(name.startswith(p) for p in EXCLUDED_PREFIXES):
-            continue
-        tables.add(name)
+    for sql_tree in non_empty_trees:
+
+        if not isinstance(sql_tree, VALID_TOP_LEVEL):
+            raise ExtractionError(
+                f"Unsupported or invalid SQL statement (got {type(sql_tree).__name__})"
+            )
+
+        cte_names = {
+            (cte.alias or "").upper()
+            for cte in sql_tree.find_all(exp.CTE)
+            if cte.alias
+        }
+
+        for selects in sql_tree.args.get('selects', []):
+            print(">> selects:" ,selects)
+        
+
+        for t in sql_tree.find_all(exp.Table):
+
+            name = (t.name or "").upper().split("@", 1)[0]
+            if not name:
+                continue
+            if name in cte_names:
+                continue
+            if name in EXCLUDED_EXACT:
+                continue
+            if any(name.startswith(p) for p in EXCLUDED_PREFIXES):
+                continue
+            tables.add(name)
 
     return sorted(tables)
 
