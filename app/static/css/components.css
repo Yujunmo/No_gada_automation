@@ -1,0 +1,228 @@
+.header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.badge {
+    align-self: flex-start;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--accent-color);
+    text-transform: uppercase;
+    background-color: #f5eae4;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.header h1 {
+    font-size: 28px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.02em;
+    color: var(--text-main);
+}
+
+.header p {
+    color: var(--text-muted);
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.notice-box {
+    background: var(--notice-bg);
+    border: 1px solid var(--notice-border);
+    border-left: 4px solid var(--accent-color);
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 13.5px;
+    color: #514b43;
+    line-height: 1.6;
+}
+
+.notice-title {
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.notice-list {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.notice-list li {
+    margin-bottom: 4px;
+}
+
+.card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+    box-sizing: border-box;
+}
+
+button {
+    background-color: var(--text-main);
+    color: #ffffff;
+    border: none;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition-default);
+    box-shadow: var(--shadow-sm);
+}
+
+button:hover {
+    background-color: var(--accent-color);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+.btn-secondary {
+    background-color: #ffffff;
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    padding: 6px 14px;
+    font-size: 13px;
+    border-radius: 6px;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-secondary:hover {
+    background-color: #faf9f6;
+    border-color: var(--text-muted);
+}
+
+.copy-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-default);
+    box-shadow: none;
+}
+
+.copy-btn:hover {
+    color: var(--accent-color);
+    background-color: #f5eae4;
+}
+
+.copy-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.result-title {
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.count-badge {
+    background-color: #f0ede8;
+    color: var(--text-main);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.error-box {
+    background-color: var(--error-bg);
+    border: 1px solid var(--error-border);
+    border-radius: 8px;
+    padding: 16px;
+    color: var(--error-text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    line-height: 1.5;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: fadeIn 0.25s ease-out;
+}
+
+.error-header {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.spinner {
+    animation: rotate 2s linear infinite;
+    width: 32px;
+    height: 32px;
+}
+
+.spinner .path {
+    stroke: var(--accent-color);
+    stroke-linecap: round;
+    animation: dash 1.5s ease-in-out infinite;
+}
+
+@keyframes rotate {
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes dash {
+    0%   { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
+    50%  { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
+    100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
+}
+
+.toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background-color: var(--text-main);
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 8px 30px rgba(27, 24, 22, 0.15);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.extractor import ExtractionError, extract_tables
+from app.tools.table_extractor.service import ExtractionError, extract_tables
 
 
 @pytest.mark.parametrize(

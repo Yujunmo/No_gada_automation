@@ -35,7 +35,7 @@ def extract_tables(sql: str) -> list[str]:
     non_empty_trees = [s for s in statements if s is not None]
     if len(non_empty_trees) == 0:
         raise ExtractionError("No valid SQL statement found")
-    
+
     tables: set[str] = set()
     for sql_tree in non_empty_trees:
 
@@ -52,7 +52,6 @@ def extract_tables(sql: str) -> list[str]:
 
         for selects in sql_tree.args.get('selects', []):
             print(">> selects:" ,selects)
-        
 
         for t in sql_tree.find_all(exp.Table):
 

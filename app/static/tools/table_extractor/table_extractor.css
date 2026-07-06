@@ -1,0 +1,143 @@
+.workspace {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+.input-card {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.input-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.input-limit {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+textarea {
+    width: 100%;
+    height: 300px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-sizing: border-box;
+    background: #ffffff;
+    color: var(--text-main);
+    resize: vertical;
+    transition: var(--transition-default);
+    line-height: 1.5;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(204, 107, 73, 0.12);
+}
+
+textarea::placeholder {
+    color: #b0aba4;
+}
+
+.btn-container {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.result-card {
+    min-height: 388px;
+    display: flex;
+    flex-direction: column;
+    transition: var(--transition-default);
+}
+
+.result-card.empty {
+    justify-content: center;
+    align-items: center;
+    color: var(--text-muted);
+    text-align: center;
+    border-style: dashed;
+    background: #fdfdfb;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.table-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.table-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    transition: var(--transition-default);
+}
+
+.table-item:hover {
+    background-color: #faf9f6;
+    border-color: var(--accent-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.table-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 8px;
+}
+
+@media (max-width: 900px) {
+    .workspace {
+        grid-template-columns: 1fr;
+    }
+    .result-card {
+        min-height: auto;
+    }
+}
