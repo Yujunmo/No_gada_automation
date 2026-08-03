@@ -1,9 +1,13 @@
-# Oracle SQL 테이블 추출 웹서비스
+# No_Gada — Oracle 업무 자동화 툴킷
 
-Oracle SQL 한 문장에서 참조된 물리 테이블 이름을 추출하는 사내 개발자용 툴.
-데이터 이관 대상 파악에 사용한다.
+반복 수작업("노가다")을 없애기 위한 Oracle 전용 사내 개발자 툴킷. 현재 다음 도구를 제공한다.
 
-- **입력**: Oracle SQL 단일 문장 (SELECT / INSERT / UPDATE / DELETE / MERGE, 최대 1MB)
+- **SQL Bench** — Oracle SQL 한 문장에서 참조된 물리 테이블 이름을 추출한다 (아래 문서 대상).
+- **Table Extractor** — 서비스 ID / DBIO ID를 입력하면 원격지 서버의 소스를 읽어 참조하는 모든 테이블을 추출한다 *(준비 중)*.
+
+아래 문서는 **SQL Bench**를 다룬다. 데이터 이관 대상 파악에 사용한다.
+
+- **입력**: Oracle SQL (SELECT / INSERT / UPDATE / DELETE / MERGE, `;`로 구분된 다중 문장 허용, 최대 1MB)
 - **출력**: 알파벳 정렬된 대문자 테이블 이름 리스트
 - **파서**: sqlglot (dialect="oracle") — DB 접속 없음
 
@@ -82,11 +86,11 @@ EMP
 
 ## API
 
-### `POST /extract`
+### `POST /sql-bench/extract`
 
 **요청**
 ```http
-POST /extract HTTP/1.1
+POST /sql-bench/extract HTTP/1.1
 Content-Type: application/json
 
 {"sql": "SELECT * FROM EMP e JOIN DEPT d ON e.id=d.id"}
@@ -101,13 +105,13 @@ Content-Type: application/json
 
 | 상태 | 상황 | 예시 |
 |------|------|------|
-| 400 | 파싱 실패 / 다중 문장 / 지원 안 하는 문법 / 빈 입력 | `{"detail": "Parse error at line 1, col 15: ..."}` |
+| 400 | 파싱 실패 / 지원 안 하는 문법 / 빈 입력 | `{"detail": "Parse error at line 1, col 15: ..."}` |
 | 413 | 입력 SQL 1MB 초과 | `{"detail": "SQL exceeds 1MB limit"}` |
 | 422 | 요청 body 스키마 오류 | FastAPI 기본 응답 |
 
 **curl 예시**
 ```bash
-curl -X POST http://localhost:8000/extract \
+curl -X POST http://localhost:8000/sql-bench/extract \
   -H "Content-Type: application/json" \
   -d '{"sql":"SELECT * FROM EMP e JOIN DEPT d ON e.id=d.id"}'
 # → {"tables":["DEPT","EMP"]}
@@ -124,8 +128,8 @@ sqlglot.parse(sql, dialect="oracle")
   ↓
 검증
   - 빈 입력 거부
-  - 문장 수 == 1 확인 (아니면 거부)
-  - 최상위 노드가 Select/Insert/Update/Delete/Merge/Union/MultitableInserts 확인
+  - 유효한 문장이 1개 이상인지 확인 (`;`로 구분된 다중 문장 허용)
+  - 각 문장의 최상위 노드가 Select/Insert/Update/Delete/Merge/Union/MultitableInserts 인지 확인
   ↓
 CTE 이름 수집 (find_all(exp.CTE))
   ↓
@@ -147,15 +151,24 @@ CTE 이름 수집 (find_all(exp.CTE))
 
 ```
 .
-├── plan.md                  # 사양 및 회귀 케이스
-├── pyproject.toml           # 의존성 (fastapi, uvicorn, sqlglot) + dev(pytest, httpx)
+├── plan.md                       # 사양 및 회귀 케이스
+├── pyproject.toml                # 의존성 (fastapi, uvicorn, sqlglot) + dev(pytest, httpx)
 ├── README.md
 ├── app/
-│   ├── main.py              # FastAPI 엔드포인트 (POST /extract, 1MB 제한)
-│   ├── extractor.py         # 핵심 추출 로직 (extract_tables, ExtractionError)
-│   └── static/index.html    # UI (텍스트박스 + 버튼 + 결과)
+│   ├── main.py                   # FastAPI 앱 — 각 툴 라우터 마운트
+│   ├── tools/
+│   │   ├── sql_bench/            # SQL Bench (SQL 붙여넣기 → 테이블 추출)
+│   │   │   ├── router.py         # POST /sql-bench/extract (1MB 제한)
+│   │   │   └── service.py        # 핵심 추출 로직 (extract_tables, ExtractionError)
+│   │   └── table_extractor/      # Table Extractor (서비스/DBIO ID → 원격 소스 스캔, 준비 중)
+│   │       ├── router.py         # prefix=/table-extractor
+│   │       └── service.py
+│   └── static/                   # UI (사이드바 + 툴별 페이지)
+│       ├── index.html
+│       └── tools/{sql_bench,table_extractor}/
 └── tests/
-    └── test_extractor.py    # 회귀 케이스 20개 (pytest)
+    └── tools/
+        └── test_sql_bench.py     # 회귀 케이스 20개 (pytest)
 ```
 
 ---
@@ -168,7 +181,7 @@ pytest
 
 `plan.md`에 정의된 20개 회귀 케이스가 모두 통과하는 것을 릴리스 기준으로 삼는다.
 
-새로운 실무 SQL에서 오추출/누락 사례가 발견되면 **먼저 `tests/test_extractor.py`에 케이스로 추가**한 뒤 `extractor.py`를 고치는 것을 원칙으로 한다 (회귀 방지).
+새로운 실무 SQL에서 오추출/누락 사례가 발견되면 **먼저 `tests/tools/test_sql_bench.py`에 케이스로 추가**한 뒤 `app/tools/sql_bench/service.py`를 고치는 것을 원칙으로 한다 (회귀 방지).
 
 ---
 
@@ -209,8 +222,8 @@ SQL에 등장한 이름이 뷰인지 물리 테이블인지 알 방법이 없다
 **Q. 파싱 실패인데 SQL이 문법상 맞는 것 같다**
 - sqlglot의 Oracle 방언 커버리지 구멍일 수 있음
 - 응답의 `detail` 필드에 위치와 원인 정보 포함됨
-- 새로운 사각지대 발견 시 `tests/test_extractor.py`에 케이스 추가 후 처리 로직 확장
+- 새로운 사각지대 발견 시 `tests/tools/test_sql_bench.py`에 케이스 추가 후 처리 로직 확장
 
 **Q. 결과에 있어야 할 테이블이 안 나온다**
-- 해당 SQL을 최소 재현 케이스로 만들어 `tests/test_extractor.py`에 추가
-- `extractor.py`의 `find_all(exp.Table)` 순회에서 놓친 노드 타입 확인 (예: 특수 DML 구문)
+- 해당 SQL을 최소 재현 케이스로 만들어 `tests/tools/test_sql_bench.py`에 추가
+- `app/tools/sql_bench/service.py`의 `find_all(exp.Table)` 순회에서 놓친 노드 타입 확인 (예: 특수 DML 구문)

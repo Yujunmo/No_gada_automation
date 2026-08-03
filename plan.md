@@ -20,7 +20,6 @@
 - **비지원 (모두 파싱 실패로 거부)**:
   - PL/SQL 블록 (프로시저, 함수, 트리거)
   - 동적 SQL (`EXECUTE IMMEDIATE ...`)
-  - 세미콜론으로 이어진 다중 문장
 
 ## 처리 파이프라인
 
@@ -109,7 +108,7 @@
 | 11 | `SELECT * FROM V$SESSION` | `[]` | 동적 뷰 제외 |
 | 12 | `SELECT * FROM EMP WHERE name = 'FROM DEPT'` | `["EMP"]` | 문자열 리터럴 오탐 없음 |
 | 13 | `SELECT /*+ FULL(EMP) */ * FROM EMP` | `["EMP"]` | 힌트 오탐 없음 |
-| 14 | `SELECT * FROM emp; SELECT * FROM dept;` | 파싱 실패 반환 | 다중 문장 거부 |
+| 14 | `SELECT * FROM emp; SELECT * FROM dept;` | 파싱 실패 반환 | 다중 문장 허용 |
 | 15 | `SELECT * FROM EMP@DB1` | `["EMP"]` | DB 링크 스트립 |
 | 16 | `SELECT * FROM SCOTT.EMP` | `["EMP"]` | 스키마 프리픽스 스트립 |
 | 17 | `SELECT * FROM EMP UNION SELECT * FROM EMP_ARCHIVE` | `["EMP", "EMP_ARCHIVE"]` | UNION 양쪽 |

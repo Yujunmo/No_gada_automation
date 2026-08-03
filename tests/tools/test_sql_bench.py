@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.tools.table_extractor.service import ExtractionError, extract_tables
+from app.tools.sql_bench.service import ExtractionError, extract_tables
 
 
 @pytest.mark.parametrize(
@@ -301,10 +301,11 @@ def test_extract_tables_success(sql: str, expected: list[str]) -> None:
     assert extract_tables(sql) == expected
 
 
-def test_multiple_statements_rejected() -> None:
-    # 14. 다중 문장 거부
-    with pytest.raises(ExtractionError):
-        extract_tables("SELECT * FROM emp; SELECT * FROM dept;")
+def test_multiple_statements_supported() -> None:
+    # 14. 다중 문장 지원 — 각 문장의 테이블을 합쳐서 반환 (중복 제거, 정렬)
+    assert extract_tables("SELECT * FROM emp; SELECT * FROM dept;") == ["DEPT", "EMP"]
+    # 동일 테이블이 여러 문장에 걸쳐 나와도 중복 없이 한 번만
+    assert extract_tables("SELECT * FROM emp; DELETE FROM emp;") == ["EMP"]
 
 
 def test_invalid_sql_raises_with_details() -> None:
@@ -320,3 +321,19 @@ def test_empty_input_rejected() -> None:
         extract_tables("")
     with pytest.raises(ExtractionError):
         extract_tables("   \n\t  ")
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "﻿SELECT * FROM EMP",          # 앞 BOM — 정제 없으면 파싱오류였음
+        "SELECT * FROM EM​P",          # 이름 안 제로폭공백
+        "SELECT * FROM E­MP",          # 이름 안 소프트하이픈
+        "SELECT * FROM EMP‎",          # 끝 방향마크(LRM)
+        "SELECT * FROM EMP",           # 공백 대신 NBSP
+        "SELECT * FROM　EMP",           # 공백 대신 전각공백
+    ],
+)
+def test_invisible_chars_sanitized(sql: str) -> None:
+    # 복붙으로 섞여 든 보이지 않는 문자가 있어도 정상 테이블명이 추출된다
+    assert extract_tables(sql) == ["EMP"]
