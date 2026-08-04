@@ -48,7 +48,8 @@ pytest -k dual
 - `app/static/js/app.js`가 `.nav-item[data-page="X"]` 클릭 시 `#page-X` 컨테이너만 표시하고 나머지를 숨긴다. 공용 헬퍼 `App.showToast` / `App.copyToClipboard` 제공.
 - 각 도구 JS는 자기 `#page-<name>` 컨테이너를 찾아 `innerHTML`을 주입하고, 자기 엔드포인트(`/<name>/...`)로 `fetch`한다. 즉 **`data-page` 값 = 컨테이너 id 접미사 = 도구 이름**으로 세 곳이 묶여 있다.
 
-### SQL Bench 처리 파이프라인 (`app/tools/sql_bench/service.py`)
+### 테이블 추출 파이프라인 (`app/common/sql.py`)
+테이블 추출은 **공용 모듈**(`app/common/sql.py`)에 있고 `sql_bench` 라우터와 `table_extractor`가 함께 import한다(도구 간 직접 의존 없음). 클래스가 아니라 상태 없는 모듈 함수 묶음이다.
 `extract_tables(sql) -> list[str]`:
 1. 빈 입력 방어 → `ExtractionError`.
 2. **`sanitize_text`(공용)로 보이지 않는 유니코드 문자 제거/정규화** — 제거 시 WARNING 로그. 복붙된 BOM·제로폭공백은 파싱오류 또는 조용한 오추출을 유발하므로 파싱 전에 반드시 거른다.
@@ -60,11 +61,12 @@ pytest -k dual
 `POST /sql-bench/extract`: `{"sql":"..."}` → `{"tables":[...]}`. 1MB 초과 413, 파싱 오류 400.
 
 ### 공용 모듈 `app/common/`
-툴 횡단 관심사를 둔다. 현재 `text.py`의 `sanitize_text(text) -> (cleaned, removed)`:
-유니코드 카테고리 기준으로 `Cf`(제로폭·BOM·소프트하이픈·방향마크) 제거, `Zs`(NBSP·전각공백) → 일반 공백, 탭/개행은 보존. **멱등**이라 경계(라우터)에서 다시 호출해도 무해 — 향후 "제거된 문자 UI 노출"이 필요하면 라우터가 별도로 호출해 `removed`를 얻어도 된다. Table Extractor(원격 파일)도 재사용 대상.
+툴 횡단 관심사를 둔다.
+- `text.py`의 `sanitize_text(text) -> (cleaned, removed)`: 유니코드 카테고리 기준으로 `Cf`(제로폭·BOM·소프트하이픈·방향마크) 제거, `Zs`(NBSP·전각공백) → 일반 공백, 탭/개행은 보존. **멱등**이라 경계(라우터)에서 다시 호출해도 무해 — 향후 "제거된 문자 UI 노출"이 필요하면 라우터가 별도로 호출해 `removed`를 얻어도 된다.
+- `sql.py`의 `extract_tables` / `ExtractionError`: Oracle SQL 테이블 추출(위 파이프라인 참고). `sql_bench`·`table_extractor` 공용.
 
 ### 로깅
-로거 이름은 `no_gada.<tool>` 계층(예: `no_gada.sql_bench`). `main.py`에서 콘솔 + `RotatingFileHandler`(`logs/no_gada.log`, 5MB×5)를 붙이고, **루트=INFO, `no_gada`=DEBUG**로 설정해 서드파티 DEBUG 노이즈는 억제하고 앱 로그만 상세히 남긴다. `logs/`는 gitignore.
+로거 이름은 `no_gada.<tool>` 계층(예: 공용 SQL 추출은 `no_gada.sql`). `main.py`에서 콘솔 + `RotatingFileHandler`(`logs/no_gada.log`, 5MB×5)를 붙이고, **루트=INFO, `no_gada`=DEBUG**로 설정해 서드파티 DEBUG 노이즈는 억제하고 앱 로그만 상세히 남긴다. `logs/`는 gitignore.
 
 ## 프로젝트 구조
 
@@ -72,6 +74,7 @@ pytest -k dual
 app/
   main.py                     # FastAPI 앱 조립 + 로깅 설정
   common/text.py              # sanitize_text (툴 공용 텍스트 정제)
+  common/sql.py               # extract_tables (툴 공용 Oracle 테이블 추출)
   tools/<tool>/router.py|service.py   # 툴별 백엔드
   static/
     index.html                # 사이드바 + 툴별 page 컨테이너
@@ -89,5 +92,5 @@ pyproject.toml                # name=no-gada, deps: fastapi/uvicorn/sqlglot
 
 ## 작업 원칙
 
-- **회귀 우선**: 새 오추출/누락 사례가 나오면 먼저 `tests/`에 케이스를 추가하고 나서 `service.py`를 고친다. 전체 회귀 케이스 사양은 `plan.md` 참고.
+- **회귀 우선**: 새 오추출/누락 사례가 나오면 먼저 `tests/`에 케이스를 추가하고 나서 `app/common/sql.py`를 고친다. 전체 회귀 케이스 사양은 `plan.md` 참고.
 - 이름 관련: 코드 모듈명 `sql_bench`/`table_extractor`는 화면 이름 "SQL Bench"/"Table Extractor"와 매핑되며, 라우트 prefix·`data-page`·정적 디렉토리가 모두 이 이름으로 묶여 있으니 리네이밍 시 함께 바꿔야 한다.

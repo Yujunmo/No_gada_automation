@@ -7,7 +7,7 @@ from sqlglot import exp
 
 from app.common.text import sanitize_text
 
-logger = logging.getLogger("no_gada.sql_bench")
+logger = logging.getLogger("no_gada.sql")
 
 EXCLUDED_EXACT = {"DUAL"}
 EXCLUDED_PREFIXES = ("USER_", "ALL_", "DBA_", "V$", "GV$", "SYS.")
@@ -27,11 +27,11 @@ class ExtractionError(Exception):
 
 
 # 파싱 #추출 #조합
-def extract_tables(sql: str) -> list[str]:
+def     extract_tables(sql: str) -> list[str]:
     """Oracle SQL(단일/다중 문장)에서 참조하는 물리 테이블명을 정렬해 반환한다."""
     tables: set[str] = set()
-    for tree in _parse_statements(sql): 
-        tables |= _tables_in(tree) 
+    for tree in _parse_statements(sql):
+        tables |= _tables_in(tree)
     return sorted(tables)
 
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.tools.sql_bench.service import ExtractionError, extract_tables
+from app.common.sql import ExtractionError, extract_tables
 
 
 @pytest.mark.parametrize(
