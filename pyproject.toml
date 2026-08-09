@@ -7,6 +7,8 @@ dependencies = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.29",
     "sqlglot>=23.0",
+    "paramiko>=3.0",  # 원격 소스(SFTP) 접속 — app/common/source.py
+    "PyMySQL>=1.1",   # 테스트 DB(MySQL) 조회 — app/common/db.py (반입 시 Oracle 드라이버로 교체)
 ]
 
 [project.optional-dependencies]
