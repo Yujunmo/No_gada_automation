@@ -14,7 +14,9 @@ from app.tools.table_extractor.router import router as table_extractor_router
 LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 
-_log_formatter = logging.Formatter("%(asctime)s %(levelname)s [%(name)s] %(message)s")
+_log_formatter = logging.Formatter(
+    "%(asctime)s %(levelname)s [%(name)s] (%(filename)s:%(lineno)d) %(message)s"
+)
 
 _console_handler = logging.StreamHandler()
 _console_handler.setFormatter(_log_formatter)
