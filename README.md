@@ -1,4 +1,4 @@
-<img width="3440" height="1440" alt="Screenshot 2026-08-09 at 6 34 18 PM" src="https://github.com/user-attachments/assets/b6cebde7-aab7-4ebd-b352-095c49879d57" /># No_Gada — Oracle 업무 자동화 툴킷
+# No_Gada — Oracle 업무 자동화 툴킷
 
 ## 개요
 
@@ -18,9 +18,6 @@
 
 전체 사양·회귀 케이스는 [`plan.md`](./plan.md), 아키텍처 상세는 [`CLAUDE.md`](./CLAUDE.md) 참고.
 
-### 예시
-<img width="3440" height="1440" alt="image" src="https://github.com/user-attachments/assets/07be7c04-ab32-4f95-9d40-d980f9771495" />
-<img width="3440" height="1440" alt="image" src="https://github.com/user-attachments/assets/4ae8df03-91e7-41ae-9b53-4d64aa222d26" />
 
 
 
