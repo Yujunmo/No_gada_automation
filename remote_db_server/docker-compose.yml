@@ -1,0 +1,31 @@
+# 테스트용 MySQL 원격 DB 서버 (개발/검증 전용)
+#
+# 노가다 앱이 "데이터를 조회해오는" 대상 DB를 로컬에서 리허설한다. 실제 반입 시에는
+# 회사 서버(Oracle)에 붙지만, 단순 조회라 방언 차이가 없어 테스트는 MySQL로 갈음한다.
+# (앱은 드라이버/접속정보만 교체 — remote_server(SFTP)의 SourceReader와 같은 구조.)
+#
+#   기동: docker compose up -d       (127.0.0.1:3306, testuser/testpass, DB=nogada)
+#   정지: docker compose down        (데이터 유지)
+#   초기화: docker compose down -v    (볼륨 삭제 → 다음 기동 시 init/ 재실행)
+services:
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"                     # 호스트 3306 → 컨테이너 3306
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass     # root(관리용). 앱은 아래 testuser로 붙는다.
+      MYSQL_DATABASE: nogada            # 최초 기동 시 자동 생성되는 DB
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: testpass
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d:ro   # *.sql 을 최초 init 시 알파벳 순 자동 실행
+      - mysql_data:/var/lib/mysql               # 데이터 영속(down 해도 유지, down -v 로 초기화)
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-ptestpass", "-utestuser"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
