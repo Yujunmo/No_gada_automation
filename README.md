@@ -18,8 +18,9 @@
 
 전체 사양·회귀 케이스는 [`plan.md`](./plan.md), 아키텍처 상세는 [`CLAUDE.md`](./CLAUDE.md) 참고.
 
-
-
+### 예시
+<img width="1666" height="1346" alt="KakaoTalk_Photo_2026-08-09-18-41-45 002" src="https://github.com/user-attachments/assets/919ef774-5dcc-4700-b9e1-fb596eb637eb" />
+<img width="1634" height="1330" alt="KakaoTalk_Photo_2026-08-09-18-41-44 001" src="https://github.com/user-attachments/assets/b4b7d3bf-2337-45d8-8791-2afd661c440f" />
 
 
 
