@@ -4,9 +4,9 @@
 
     container.innerHTML = `
         <div class="header">
-            <div class="badge">Oracle Parser</div>
+            <div class="badge">SQL 파서</div>
             <h1>SQL Bench</h1>
-            <p>단일 SQL 쿼리 문장을 입력하면 참조하고 있는 모든 물리 테이블의 이름을 실시간으로 파싱하여 추출합니다.</p>
+            <p>단일 SQL 쿼리 문장을 입력하면 참조하고 있는 모든 물리 테이블의 이름을 추출합니다.</p>
         </div>
 
         <div class="notice-box">
