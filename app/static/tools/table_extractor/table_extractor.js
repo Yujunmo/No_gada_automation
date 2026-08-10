@@ -84,6 +84,7 @@
 
     typeSel.addEventListener('change', function () {
         idInput.placeholder = PLACEHOLDER[typeSel.value];
+        updateProgVisibility();
     });
 
     // 업무그룹 콤보박스: 입력한 문자열로 목록을 필터링하는 검색형 드롭다운
@@ -92,6 +93,14 @@
     var PREFIXES = ['TRU', 'PFO', 'PTN', 'RPT'];
     var progInput = container.querySelector('#te-prog');
     var progList = container.querySelector('#te-prog-list');
+    var progCombo = container.querySelector('#te-prog-combo');
+
+    // DBIO는 리소스그룹(업무그룹)이 파일 경로에 쓰이지 않아 콤보박스를 숨긴다.
+    // Service/Batch/Biz 등 그 외 타입에서만 리소스그룹을 선택받는다.
+    function updateProgVisibility() {
+        progCombo.style.display = typeSel.value === 'dbio' ? 'none' : '';
+    }
+    updateProgVisibility();   // 초기 상태(기본 DBIO) 반영
 
     function renderProgList(query) {
         var q = (query || '').trim().toUpperCase();
@@ -621,13 +630,17 @@
 
     submitBtn.addEventListener('click', async function () {
         var idType = typeSel.value;
-        var prog = progInput.value.trim().toUpperCase();
         var id = idInput.value.trim();
 
         // 클라이언트 선검증: 서버의 422(장황한 pydantic 오류) 대신 친절한 메시지
-        if (PROG_OPTIONS.indexOf(prog) === -1) {
-            showError('입력값 오류', '업무그룹을 목록에서 선택하세요.');
-            return;
+        // DBIO는 리소스그룹을 받지 않음 → 2세그먼트 경로(생략). 그 외 타입만 리소스그룹을 검증해 3세그먼트로.
+        var prog = null;
+        if (idType !== 'dbio') {
+            prog = progInput.value.trim().toUpperCase();
+            if (PROG_OPTIONS.indexOf(prog) === -1) {
+                showError('입력값 오류', '업무그룹을 목록에서 선택하세요.');
+                return;
+            }
         }
         if (!id) {
             showError('입력값 오류', 'ID를 입력하세요.');
@@ -637,9 +650,8 @@
         showSpinner();
 
         try {
-            var url = '/table-extractor/' +
-                encodeURIComponent(idType) + '/' +
-                encodeURIComponent(prog) + '/' +
+            var url = '/table-extractor/' + encodeURIComponent(idType) + '/' +
+                (prog ? encodeURIComponent(prog) + '/' : '') +
                 encodeURIComponent(id);
             var res = await fetch(url);
             var data = await res.json();

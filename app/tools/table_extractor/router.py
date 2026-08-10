@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from typing import Literal
+from typing import Literal, Optional
 
 from app.common import schema
 from app.common.db import DbClient, DbError, QueryError, default_db
@@ -63,14 +63,20 @@ class MigrateResponse(BaseModel):
     groups: list[GroupOut]   # 접미사 그룹별 SQL(팝업 박스용)
 
 
+# DBIO는 resource_group이 파일 경로에 쓰이지 않아 2세그먼트(생략) 경로를 허용한다.
+# Service/Batch/Biz는 resource_group이 필요하므로 3세그먼트 경로로 받는다(둘 다 같은 핸들러).
+@router.get("/{module_type}/{file_id}", response_model=ExtractResponse)
 @router.get("/{module_type}/{resource_group}/{file_id}", response_model=ExtractResponse)
 def extract(
     module_type: Module_Type,
-    resource_group: ResourceGroup,
     file_id: str,
+    resource_group: Optional[ResourceGroup] = None,
     reader: SourceReader = Depends(default_reader),
 ) -> ExtractResponse:
-    """module_type/resource_group/ID → 원격 소스 → 참조 테이블 추출. 현재는 DBIO만 구현됨."""
+    """module_type/(resource_group)/ID → 원격 소스 → 참조 테이블 추출. 현재는 DBIO만 구현됨.
+
+    resource_group은 DBIO에서 생략 가능(2세그먼트). Service/Batch/Biz 확장 시 필수가 된다.
+    """
     ident = file_id.strip()
     logger.info("extract 요청 수신: module_type=%s resource_group=%s file_id=%s", module_type, resource_group, ident)
 

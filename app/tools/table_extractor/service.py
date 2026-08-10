@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import Optional
 
 from app.common import schema
 from app.common.db import DbClient
@@ -21,7 +22,7 @@ class ExtractResult:
     dbios: list[str]
 
 
-def extract(module_type: Module_Type, resource_group: ResourceGroup, file_id: str, reader: SourceReader) -> ExtractResult:
+def extract(module_type: Module_Type, resource_group: Optional[ResourceGroup], file_id: str, reader: SourceReader) -> ExtractResult:
     if module_type != "dbio":
         raise NotImplementedError(f"module_type={module_type} not yet supported")
 

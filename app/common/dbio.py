@@ -39,8 +39,7 @@ def classify_sqltype(file_id: str) -> str:
 def read_dbio_xml(file_id: str, reader: SourceReader) -> str:
     """ID 접미사를 검증한 뒤 release/dbio/xml/<ID>.xml 을 조회한다(평면 구조).
 
-    파일이 <ID>.xml로 평평하게 모여 있어 PROG/SQLTYPE는 경로에 쓰이지 않는다.
-    다만 `classify_sqltype`로 접미사가 인식 가능한 DBIO ID인지 검증해(미인식 → UnknownSqlType)
+    `classify_sqltype`로 접미사가 인식 가능한 DBIO ID인지 검증해(미인식 → UnknownSqlType)
     잘못된 ID를 파일 없음(404)보다 명확한 400으로 먼저 걸러낸다.
     """
     classify_sqltype(file_id)  # 접미사 검증 전용 — 반환 SQLTYPE은 경로에 사용하지 않음.
