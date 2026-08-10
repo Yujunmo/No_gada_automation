@@ -10,7 +10,7 @@ from typing import Literal
 from app.common import schema
 from app.common.db import DbClient, DbError, QueryError, default_db
 from app.common.dbio import UnknownSqlType
-from app.common.proframe import IdType, Prog
+from app.common.proframe import Module_Type, ResourceGroup
 from app.common.sql import ExtractionError
 from app.common.source import SourceNotFound, SourceReader, default_reader
 from app.tools.table_extractor import migrate, service
@@ -63,27 +63,27 @@ class MigrateResponse(BaseModel):
     groups: list[GroupOut]   # 접미사 그룹별 SQL(팝업 박스용)
 
 
-@router.get("/{id_type}/{prog}/{id}", response_model=ExtractResponse)
+@router.get("/{module_type}/{resource_group}/{file_id}", response_model=ExtractResponse)
 def extract(
-    id_type: IdType,
-    prog: Prog,
-    id: str,
+    module_type: Module_Type,
+    resource_group: ResourceGroup,
+    file_id: str,
     reader: SourceReader = Depends(default_reader),
 ) -> ExtractResponse:
-    """id_type/prog/ID → 원격 소스 → 참조 테이블 추출. 현재는 DBIO만 구현됨."""
-    ident = id.strip()
-    logger.info("extract 요청 수신: id_type=%s prog=%s id=%s", id_type, prog, ident)
+    """module_type/resource_group/ID → 원격 소스 → 참조 테이블 추출. 현재는 DBIO만 구현됨."""
+    ident = file_id.strip()
+    logger.info("extract 요청 수신: module_type=%s resource_group=%s file_id=%s", module_type, resource_group, ident)
 
     if not ident:
         logger.warning("extract 거부: 빈 ID")
         raise HTTPException(status_code=400, detail="ID is empty")
 
-    if id_type != "dbio":
-        logger.warning("extract 미구현: id_type=%s", id_type) # dbio 외의 id_type은 아직 구현되지 않음
-        raise HTTPException(status_code=501, detail=f"id_type={id_type} not implemented yet")
+    if module_type != "dbio":
+        logger.warning("extract 미구현: module_type=%s", module_type) # dbio 외의 module_type은 아직 구현되지 않음
+        raise HTTPException(status_code=501, detail=f"module_type={module_type} not implemented yet")
 
     try:
-        result = service.extract(id_type, prog, ident, reader)
+        result = service.extract(module_type, resource_group, ident, reader)
     except UnknownSqlType as e:
         logger.warning("extract 거부(ID 패턴 인식 불가): %s", e)
         raise HTTPException(status_code=400, detail=str(e))

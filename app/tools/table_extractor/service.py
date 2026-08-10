@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from app.common import schema
 from app.common.db import DbClient
 from app.common.dbio import read_dbio_xml
-from app.common.proframe import IdType, Prog
+from app.common.proframe import Module_Type, ResourceGroup
 from app.common.sql import extract_tables
 from app.common.source import SourceReader
 from app.tools.table_extractor import mapper, migrate
@@ -21,22 +21,22 @@ class ExtractResult:
     dbios: list[str]
 
 
-def extract(id_type: IdType, prog: Prog, id: str, reader: SourceReader) -> ExtractResult:
-    if id_type != "dbio":
-        raise NotImplementedError(f"id_type={id_type} not yet supported")
+def extract(module_type: Module_Type, resource_group: ResourceGroup, file_id: str, reader: SourceReader) -> ExtractResult:
+    if module_type != "dbio":
+        raise NotImplementedError(f"module_type={module_type} not yet supported")
 
-    xml_text = read_dbio_xml(prog, id, reader)
-    logger.debug("service.extract: XML 조회 완료 prog=%s id=%s (%d chars)", prog, id, len(xml_text))
+    xml_text = read_dbio_xml(file_id, reader)
+    logger.debug("service.extract: XML 조회 완료 resource_group=%s file_id=%s (%d chars)", resource_group, file_id, len(xml_text))
 
     sqls = mapper.extract_sql(xml_text)
-    logger.debug("service.extract: SQL %d개 추출 id=%s", len(sqls), id)
+    logger.debug("service.extract: SQL %d개 추출 file_id=%s", len(sqls), file_id)
 
     tables: set[str] = set()
     for sql in sqls:
         tables.update(extract_tables(sql))
-    logger.debug("service.extract: 테이블 %d개 집계 id=%s", len(tables), id)
+    logger.debug("service.extract: 테이블 %d개 집계 file_id=%s", len(tables), file_id)
 
-    return ExtractResult(tables=sorted(tables), sql=";\n".join(sqls), dbios=[id])
+    return ExtractResult(tables=sorted(tables), sql=";\n".join(sqls), dbios=[file_id])
 
 
 def migrate_sql(

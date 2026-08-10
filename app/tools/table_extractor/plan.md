@@ -1,6 +1,6 @@
 # Table Extractor — 백엔드 (원격 소스 → 참조 테이블 추출)
 
-> **기준:** DBIO 포맷·경로는 실물 픽스처 `remote_server/files/…/publish_ecams/resource/`를 정답으로 삼는다.
+> **기준:** DBIO 포맷·경로는 실물 픽스처 `remote_server/files/…/release/dbio/xml/`(평면 `<ID>.xml`)를 정답으로 삼는다. *(2026-08-10 실물 경로 정정 — 이전 `publish_ecams/resource/<PROG>/<SQLTYPE>/…`는 오경로였음. 아래 날짜 로그의 옛 경로 서술보다 맨 끝 2026-08-10 섹션이 최신.)*
 
 ## Context
 프론트(드롭박스+입력+버튼, 좌 테이블목록/우 SQL 패널)는 완성됐고 `추출하기` 버튼은 아직 무동작이다. 백엔드는 빈 스텁(`router.py`는 prefix만, `service.py`는 비어 있음)이다. 이번 작업은 **ID → 원격 소스 파일 → 참조 테이블** 파이프라인을 구현한다.
@@ -170,3 +170,28 @@ pytest                                                      # 회귀(현재 72�
 ## ⏭️ 남은 것
 - [ ] Service/Batch/Biz `id_type` 구현 — 상위 `.c` 파일 실물(하위 DBIO ID가 박히는 모습)을 아직 못 봐서 `classify`/`scan_ref_ids`/경로 규칙 미확정. 재귀 해석(`visited`로 순환 차단) 로직도 이때 추가.
 - [ ] 프론트 `#te-submit` fetch 연결 — 지금 API가 `GET /table-extractor/{id_type}/{prog}/{id}`이므로 콤보박스/드롭박스/입력값으로 URL 조합해 fetch, 좌측 테이블 목록/우측 SQL 채우기, 에러박스·스피너 재사용.
+
+---
+
+# 진행 상황 (2026-08-10 기준 — DBIO 경로 평면화 + 네이밍 정리)
+
+> **이 섹션이 최신**이다. 위 2026-08-04·08-08 로그의 `publish_ecams/resource/<PROG>/<SQLTYPE>/<ID>/<ID>.xml` 경로, `read_dbio_xml`에 `prog/resource_group` 인자, `IdType`/`Prog` 명칭은 **모두 아래로 대체**됨.
+
+## 🔀 DBIO 실물 경로 정정 — 평면 구조
+- 실물 경로는 `publish_ecams/resource/<PROG>/<SQLTYPE>/<ID>/<ID>.xml`이 아니라 **`release/dbio/xml/<ID>.xml`(완전 평면 — PROG·SQLTYPE 하위 없음)**이었다. `remote_server/files/…/`의 DBIO XML 5개(신규 복원 `AIS_ACCSUBJ_BS_VF001` + 기존 `PFO_CLCD_MIP_MA_VF001`·`PFO_FUND_BS_DF037`·`PFO_MNCM_CLCD_HT_EI901`·`PFO_STCK_MA_DS200`)를 이 디렉토리로 이동, 옛 `publish_ecams/` 트리는 제거.
+- **`app/common/dbio.py`**:
+  - `DBIO_RESOURCE_ROOT` = `/src/truap01dap1/proframe/proframe5.0/release/dbio/xml`.
+  - `read_dbio_xml(file_id, reader)` — **`resource_group` 인자 제거**(평면이라 PROG 불필요). 경로 = `{ROOT}/<ID>.xml` 1회 조합.
+  - `classify_sqltype(file_id)`는 이제 **경로 결정용이 아니라 접미사 검증 전용**으로 남는다: 인식 못 하는 접미사(`SQL_TYPE_BY_SUFFIX`/`ID_SUFFIX_RE` 미매칭)를 `UnknownSqlType`으로 던져 잘못된 ID를 파일없음(404)보다 명확한 **400**으로 먼저 거른다. (SQLTYPE 매핑 표·정규식은 그대로 유지 — 검증 게이트로 재사용.)
+- **`service.py`**: `read_dbio_xml(file_id, reader)` 호출로 수정(`resource_group`은 로그·라우트 계약용으로만 유지).
+
+## 🏷️ 공용 타입·파라미터 네이밍 정리
+- `app/common/proframe.py`: **`IdType` → `Module_Type`**, **`Prog` → `ResourceGroup`**(값 집합은 동일: `dbio/service/batch/biz`, `PCSP PCSH NCOM NCSP PCOM PPFR RLGR`).
+- `extract`/`read_dbio_xml` 파라미터: **`id_type` → `module_type`**, **`prog` → `resource_group`**, **`id` → `file_id`**.
+
+## 🔗 URL 계약은 그대로 유지
+- **`GET /table-extractor/{module_type}/{resource_group}/{file_id}`** 유지. DBIO에선 `resource_group`이 파일 위치 탐색에 쓰이지 않지만, **향후 Service/Batch/Biz 확장 시 `compile/<PROG>/src/{batch,module,serviceModule}/…` 경로 결정에 실제로 사용**할 예정이라 라우트·프론트 계약을 바꾸지 않는다. `module_type`/`resource_group`은 계속 `Literal`이라 잘못된 값은 FastAPI 422.
+
+## ✅ 테스트
+- `tests/tools/test_table_extractor.py`: `FIXTURE_ROOT`·기대 경로(`DS200_PATH`/`EI901_PATH`)를 평면으로, `read_dbio_xml` 호출에서 `resource_group` 인자 제거. `classify_sqltype`(→400)·`SourceNotFound`(→404)·`Literal`(→422) 검증은 그대로.
+- **전체 103개 통과.**
