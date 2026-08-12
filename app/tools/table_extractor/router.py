@@ -12,7 +12,7 @@ from app.common.db import DbClient, DbError, QueryError, default_db
 from app.common.dbio import UnknownSqlType
 from app.common.proframe import Module_Type, ResourceGroup
 from app.common.sql import ExtractionError
-from app.common.source import SourceNotFound, SourceReader, default_reader
+from app.common.source import SourceError, SourceNotFound, SourceReader, default_reader
 from app.tools.table_extractor import migrate, service
 
 logger = logging.getLogger("no_gada.table_extractor")
@@ -21,9 +21,10 @@ router = APIRouter(prefix="/table-extractor")
 
 
 class ExtractResponse(BaseModel):
-    tables: list[str]  # 정렬된 대문자 물리 테이블명 합집합
-    sql: str           # 수집한 SQL(우측 패널 표시용, ;로 연결)
-    dbios: list[str]   # 해석 과정에서 도달한 DBIO ID 목록(참고용)
+    tables: list[str]    # 정렬된 대문자 물리 테이블명 합집합
+    sql: str             # 수집한 SQL(우측 패널 표시용, ;로 연결)
+    dbios: list[str]     # 해석 과정에서 도달한 DBIO ID 목록(참고용)
+    batches: list[str]   # 참조만 되고 소스는 들여다보지 않은 배치 ID 목록(참고용)
 
 
 class PkRequest(BaseModel):
@@ -73,9 +74,11 @@ def extract(
     resource_group: Optional[ResourceGroup] = None,
     reader: SourceReader = Depends(default_reader),
 ) -> ExtractResponse:
-    """module_type/(resource_group)/ID → 원격 소스 → 참조 테이블 추출. 현재는 DBIO만 구현됨.
+    """module_type/(resource_group)/ID → 원격 소스 → 참조 테이블 추출(dbio는 리프, 나머지는 재귀).
 
-    resource_group은 DBIO에서 생략 가능(2세그먼트). Service/Batch/Biz 확장 시 필수가 된다.
+    resource_group은 DBIO에서만 생략 가능(2세그먼트). Service/Batch/Biz는 최상위 진입 모듈의
+    업무그룹을 알아야 경로를 조합할 수 있어 필수(3세그먼트) — 재귀 중 발견되는 참조는
+    service.extract_from_module 내부에서 알아서 find로 찾는다.
     """
     ident = file_id.strip()
     logger.info("extract 요청 수신: module_type=%s resource_group=%s file_id=%s", module_type, resource_group, ident)
@@ -84,9 +87,9 @@ def extract(
         logger.warning("extract 거부: 빈 ID")
         raise HTTPException(status_code=400, detail="ID is empty")
 
-    if module_type != "dbio":
-        logger.warning("extract 미구현: module_type=%s", module_type) # dbio 외의 module_type은 아직 구현되지 않음
-        raise HTTPException(status_code=501, detail=f"module_type={module_type} not implemented yet")
+    if module_type != "dbio" and resource_group is None:
+        logger.warning("extract 거부: resource_group 누락 module_type=%s", module_type)
+        raise HTTPException(status_code=400, detail=f"resource_group required for {module_type}")
 
     try:
         result = service.extract(module_type, resource_group, ident, reader)
@@ -96,12 +99,18 @@ def extract(
     except SourceNotFound as e:
         logger.warning("extract 실패(파일 없음): %s", e)
         raise HTTPException(status_code=404, detail=str(e))
+    except SourceError as e:
+        logger.warning("extract 실패(원격 접속): %s", e)
+        raise HTTPException(status_code=503, detail=str(e))
     except ExtractionError as e:
         logger.warning("extract 실패(파싱): %s", e)
         raise HTTPException(status_code=400, detail=str(e))
 
-    logger.info("extract 완료: 테이블 %d개, DBIO %d개", len(result.tables), len(result.dbios))
-    return ExtractResponse(tables=result.tables, sql=result.sql, dbios=result.dbios)
+    logger.info(
+        "extract 완료: 테이블 %d개, DBIO %d개, batch 참조 %d개",
+        len(result.tables), len(result.dbios), len(result.batches),
+    )
+    return ExtractResponse(tables=result.tables, sql=result.sql, dbios=result.dbios, batches=result.batches)
 
 
 @router.post("/pks", response_model=PkResponse)
