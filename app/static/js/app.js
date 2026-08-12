@@ -1,5 +1,18 @@
 (function () {
     const toastEl = document.getElementById('toast');
+    const sidebarEl = document.querySelector('.sidebar');
+    const sidebarToggleEl = document.getElementById('sidebar-toggle');
+
+    if (sidebarEl && localStorage.getItem('sidebarCollapsed') === 'true') {
+        sidebarEl.classList.add('collapsed');
+    }
+
+    if (sidebarEl && sidebarToggleEl) {
+        sidebarToggleEl.addEventListener('click', function () {
+            const collapsed = sidebarEl.classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', collapsed);
+        });
+    }
 
     window.App = {
         showToast: function (message) {
