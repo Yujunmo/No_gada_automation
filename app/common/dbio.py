@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import re
 
+from app.common.proframe import PROFRAME_ROOT
 from app.common.source import SourceReader
 
 # DBIO 리소스 위치 규칙: release/dbio/xml/<ID>.xml (평면 구조 — PROG/SQLTYPE 하위 없음).
-# 아래는 <ID>.xml 앞의 서버/버전 고정 경로.
-DBIO_RESOURCE_ROOT = "/src/truap01dap1/proframe/proframe5.0/release/dbio/xml"
+DBIO_RESOURCE_ROOT = f"{PROFRAME_ROOT}/release/dbio/xml"
 
 # ID 접미사 2글자 → SQLTYPE 디렉토리명 매핑.
 SQL_TYPE_BY_SUFFIX = {

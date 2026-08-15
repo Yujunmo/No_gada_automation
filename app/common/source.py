@@ -2,7 +2,7 @@
 
 "경로를 주면 파일 내용을 문자열로 돌려준다"는 한 가지 동작만 제공한다.
 `SourceReader` 인터페이스 뒤에 `SftpSourceReader`(실제 접속) 구현을 숨긴다. 개발/검증은
-로컬 Docker SFTP(`remote_server/`, 127.0.0.1:2222)로, 단위 테스트는 인메모리 가짜 reader로
+로컬 Docker SFTP(`remote_ap_server/`, 127.0.0.1:2222)로, 단위 테스트는 인메모리 가짜 reader로
 이 인터페이스를 만족시킨다. 특정 도구 지식이 없는 범용 인프라라 `app/common/`에 둔다(같은 범주: text.py).
 이용하는 도구가 `reader.read(path)`만 호출하므로 SFTP 접속 코드는 이 파일 한 곳에만 존재한다.
 """
@@ -27,9 +27,10 @@ class SourceError(Exception):
 
 @runtime_checkable
 class SourceReader(Protocol):
-    """경로 → 파일 내용(str). 없으면 SourceNotFound, 접근 실패면 SourceError."""
+    """경로 → 파일 내용(str)/디렉토리 항목 목록(list[str]). 없으면 SourceNotFound, 접근 실패면 SourceError."""
 
     def read(self, path: str) -> str: ...
+    def listdir(self, path: str) -> list[str]: ...
 
 
 class SftpSourceReader:
@@ -65,9 +66,7 @@ class SftpSourceReader:
         self._encoding = encoding
         self._timeout = timeout
 
-    def read(self, path: str) -> str:
-        """SFTP 접속 후 remote 경로를 읽어 문자열로 돌려준다."""
-
+    def _connect(self) -> paramiko.SSHClient:
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
@@ -85,7 +84,12 @@ class SftpSourceReader:
             raise SourceError(f"SFTP 인증 실패: {self._user}@{self._host}:{self._port} ({e})") from e
         except (paramiko.SSHException, OSError) as e:
             raise SourceError(f"SFTP 접속 실패: {self._host}:{self._port} ({e})") from e
+        return client
 
+    def read(self, path: str) -> str:
+        """SFTP 접속 후 remote 경로를 읽어 문자열로 돌려준다."""
+
+        client = self._connect()
         try:
             sftp = client.open_sftp()
             try:
@@ -104,6 +108,26 @@ class SftpSourceReader:
         text = data.decode(self._encoding, "replace")
         logger.debug("SftpSourceReader read: %s (%d chars)", path, len(text))
         return text
+
+    def listdir(self, path: str) -> list[str]:
+        """SFTP 접속 후 remote 디렉토리의 항목명 목록을 돌려준다(1레벨)."""
+
+        client = self._connect()
+        try:
+            sftp = client.open_sftp()
+            try:
+                names = sftp.listdir(path)
+            except FileNotFoundError as e:
+                raise SourceNotFound(f"디렉토리 없음: {path} ({e})") from e
+            except OSError as e:
+                raise SourceError(f"SFTP 전송 실패: {path} ({e})") from e
+            finally:
+                sftp.close()
+        finally:
+            client.close()
+
+        logger.debug("SftpSourceReader listdir: %s (%d개)", path, len(names))
+        return names
 
 
 def default_reader() -> SourceReader:
