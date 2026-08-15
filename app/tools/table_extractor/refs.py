@@ -56,6 +56,7 @@ def scan_module_refs(text: str) -> list[tuple[Module_Type, str]]:
             matches.append((m.start(), ref_type, m.group(1)))
     matches.sort(key=lambda item: item[0])
 
+    # 중복 제거: (타입, ID) 쌍이 이미 나오면 skip. 순서 유지.
     seen: set[tuple[Module_Type, str]] = set()
     refs: list[tuple[Module_Type, str]] = []
     for _, ref_type, ref_id in matches:

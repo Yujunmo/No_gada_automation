@@ -12,6 +12,7 @@ from app.common.proframe import Module_Type, ResourceGroup
 from app.common.sql import ExtractionError, extract_tables
 from app.common.source import SourceError, SourceNotFound, SourceReader
 from app.tools.table_extractor import mapper, migrate
+from app.tools.table_extractor.excludes import load_excluded_refs
 from app.tools.table_extractor.refs import scan_module_refs
 
 logger = logging.getLogger("no_gada.table_extractor")
@@ -59,6 +60,7 @@ def extract_from_module(
     file_id: str,
     reader: SourceReader,
     visited: Optional[set[str]] = None,
+    excluded: Optional[set[str]] = None,
 ) -> ExtractResult:
     """service/batch/biz 모듈 → 참조를 재귀적으로 따라가 도달한 DBIO의 SQL/테이블을 합산.
 
@@ -66,10 +68,16 @@ def extract_from_module(
     전파해 라우터가 404/503으로 매핑한다. 재귀 호출(visited가 전달됨) 중 만나는 개별
     DBIO/모듈 실패는 skip+warn 후 부분성공으로 처리한다. visited(file_id 집합, 재귀 전체가
     공유)로 순환 참조를 차단한다 — 타입이 달라도 같은 ID는 한 번만 처리한다.
+
+    excluded(설정 파일 기반 항상-제외 ID 집합)는 재귀 중 "만나는" 참조에만 적용된다 —
+    최상위 진입 모듈(top_level) 자체는 이 목록과 무관하게 항상 처리한다. 최초 호출 시
+    None이면 load_excluded_refs()로 1회 로드해 재귀 전체에 그대로 전달한다.
     """
     top_level = visited is None
     if visited is None:
         visited = set()
+    if excluded is None:
+        excluded = load_excluded_refs()
     visited.add(file_id)
 
     try:
@@ -100,6 +108,11 @@ def extract_from_module(
         if ref_id in visited:
             continue
 
+        if ref_id in excluded:
+            visited.add(ref_id)
+            logger.debug("extract_from_module: 제외 목록에 있어 skip ref_type=%s ref_id=%s", ref_type, ref_id)
+            continue
+
         if ref_type == "batch":
             # 배치는 별도 배치 잡 호출이라 소스까지 들여다보지 않고 참조된 이름만 기록한다.
             visited.add(ref_id)
@@ -116,7 +129,7 @@ def extract_from_module(
                 continue
         else:
             # 재귀 중 발견된 참조는 업무그룹을 모르므로 resource_group=None → find.
-            result = extract_from_module(ref_type, None, ref_id, reader, visited=visited)
+            result = extract_from_module(ref_type, None, ref_id, reader, visited=visited, excluded=excluded)
 
         tables.update(result.tables)
         if result.sql:

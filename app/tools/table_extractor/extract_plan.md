@@ -148,7 +148,7 @@ def extract_from_module(module_type, resource_group, file_id, reader, visited=No
 ## 검증
 1. **단위/통합**: `pytest tests/tools/test_table_extractor.py tests/tools/test_refs.py tests/common/test_csource.py tests/common/test_module_src.py` — 전부 그린.
 2. **전체 회귀**: `pytest` — 137개 그린(2026-08-13 기준).
-3. **수동(제한적, 미실시)**: `remote_server` Docker SFTP 기동 후 `GET /table-extractor/biz/PCOM/MPCOM_GetBzopDate` — 실물 biz 소스는 있으나 참조 DBIO XML(VS004~011)이 아직 remote에 없어 nested skip+warn로 부분/빈 결과가 정상. 실 end-to-end는 해당 DBIO XML 픽스처 확보 후.
+3. **수동(제한적, 미실시)**: `remote_ap_server` Docker SFTP 기동 후 `GET /table-extractor/biz/PCOM/MPCOM_GetBzopDate` — 실물 biz 소스는 있으나 참조 DBIO XML(VS004~011)이 아직 remote에 없어 nested skip+warn로 부분/빈 결과가 정상. 실 end-to-end는 해당 DBIO XML 픽스처 확보 후.
 
 ## 미해결 / 후속
 - **`CLAUDE.md` 미반영**: 이번 재귀 파이프라인(`module_src.py`/`refs.py`/`csource.py`/`service.py` 재귀/`PROFRAME_ROOT`/`batches` 필드)이 아직 `CLAUDE.md`의 "Table Extractor 파이프라인" 절에 반영 안 됨.

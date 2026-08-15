@@ -1,6 +1,6 @@
 # Table Extractor — 백엔드 (원격 소스 → 참조 테이블 추출)
 
-> **기준:** DBIO 포맷·경로는 실물 픽스처 `remote_server/files/…/release/dbio/xml/`(평면 `<ID>.xml`)를 정답으로 삼는다. *(2026-08-10 실물 경로 정정 — 이전 `publish_ecams/resource/<PROG>/<SQLTYPE>/…`는 오경로였음. 아래 날짜 로그의 옛 경로 서술보다 맨 끝 2026-08-10 섹션이 최신.)*
+> **기준:** DBIO 포맷·경로는 실물 픽스처 `remote_ap_server/files/…/release/dbio/xml/`(평면 `<ID>.xml`)를 정답으로 삼는다. *(2026-08-10 실물 경로 정정 — 이전 `publish_ecams/resource/<PROG>/<SQLTYPE>/…`는 오경로였음. 아래 날짜 로그의 옛 경로 서술보다 맨 끝 2026-08-10 섹션이 최신.)*
 
 ## Context
 프론트(드롭박스+입력+버튼, 좌 테이블목록/우 SQL 패널)는 완성됐고 `추출하기` 버튼은 아직 무동작이다. 백엔드는 빈 스텁(`router.py`는 prefix만, `service.py`는 비어 있음)이다. 이번 작업은 **ID → 원격 소스 파일 → 참조 테이블** 파이프라인을 구현한다.
@@ -40,7 +40,7 @@ class SourceError(Exception): ...                  # 접속/인증/전송 실패
 - FTP 미접속이라도 `LocalSourceReader`로 파이프라인 전체가 돈다. 서비스는 reader를 **주입**받아 테스트에서 fake 교체 가능.
 
 ### 2. `app/tools/table_extractor/ids.py` — 타입·경로 규칙 (설정 한 곳)
-**실물 디렉토리 레이아웃**(`remote_server/files/truap01dap1/proframe/proframe5.0/` 기준):
+**실물 디렉토리 레이아웃**(`remote_ap_server/files/truap01dap1/proframe/proframe5.0/` 기준):
 - DBIO(=SQL 리소스): `publish_ecams/resource/<PROG>/<SQLTYPE>/<ID>/<ID>.xml`
   - `<PROG>` = 프로그램/리소스그룹: `PCSP PCSH NCOM NCSP PCOM PPFR RLGR`
   - `<SQLTYPE>` = `DYNAMICSQL EXECSQL PERSIST VIEW` (모두 DBIO, 루트 태그만 다름)
@@ -86,7 +86,7 @@ class ExtractResponse(BaseModel): tables: list[str];  sql: str;  dbios: list[str
 @router.post("/extract", response_model=ExtractResponse)
 ```
 - 빈 `id` → 400. `SourceNotFound` → 404. 최상위 파일에서 아무 것도 못 얻거나 파싱 실패 → 400(`detail`). 로깅은 sql_bench와 동형(수신/완료 info, 실패 warning).
-- reader는 env(`NOGADA_SFTP_*`)에서 `SftpSourceReader`로 생성(기본 `remote_server` Docker SFTP 127.0.0.1:2222). 교체 지점 한 곳. → `app/common/source.py`의 `default_reader()`.
+- reader는 env(`NOGADA_SFTP_*`)에서 `SftpSourceReader`로 생성(기본 `remote_ap_server` Docker SFTP 127.0.0.1:2222). 교체 지점 한 곳. → `app/common/source.py`의 `default_reader()`.
 
 ### 6. 프론트 연결 (마무리) `app/static/tools/table_extractor/table_extractor.js`
 - `#te-submit` 클릭 → `POST /table-extractor/extract {id_type, id}` fetch.
@@ -99,7 +99,7 @@ class ExtractResponse(BaseModel): tables: list[str];  sql: str;  dbios: list[str
 
 ## 검증 (end-to-end)
 1. **단위 테스트** `tests/tools/test_table_extractor.py` (네트워크 無, 인메모리 fake reader 주입):
-   - DBIO 단건: `<sqlString>` → 테이블 정확히 추출(`:bind`·힌트·UNION·엔티티 언이스케이프 포함). 픽스처는 `remote_server/files/.../DYNAMICSQL/{PFO_STCK_MA_DS200,PFO_FUND_BS_DF037}`, `.../EXECSQL/PFO_MNCM_CLCD_HT_EI901` 활용(기대: 각각 {PFO_STCK_MA,TRU_STCK_ITMS_HT,PFO_BRWN_STCK_MA,PFO_SPA_MA,PFO_SPA_ITMS_HT} / {PFO_FUND_BS,PFO_TAMI_SM,PFO_CLFD_REVS_STPR_MA} / {PFO_MNCM_CLCD_HT}).
+   - DBIO 단건: `<sqlString>` → 테이블 정확히 추출(`:bind`·힌트·UNION·엔티티 언이스케이프 포함). 픽스처는 `remote_ap_server/files/.../DYNAMICSQL/{PFO_STCK_MA_DS200,PFO_FUND_BS_DF037}`, `.../EXECSQL/PFO_MNCM_CLCD_HT_EI901` 활용(기대: 각각 {PFO_STCK_MA,TRU_STCK_ITMS_HT,PFO_BRWN_STCK_MA,PFO_SPA_MA,PFO_SPA_ITMS_HT} / {PFO_FUND_BS,PFO_TAMI_SM,PFO_CLFD_REVS_STPR_MA} / {PFO_MNCM_CLCD_HT}).
    - DYNAMICSQL·EXECSQL 루트 태그 **둘 다** `<sqlString>` 추출되는지.
    - Service→DBIO 1홉, Service→Biz→DBIO **재귀**, **순환 참조**(A→B→A) 무한루프 안 빠지는지.
    - `SourceNotFound` 전파, 접미/패턴 안 맞는 리터럴 무시.
@@ -125,17 +125,17 @@ class ExtractResponse(BaseModel): tables: list[str];  sql: str;  dbios: list[str
    - **`LocalSourceReader`는 삭제함** — 개발/검증은 Docker SFTP, 단위테스트는 인메모리 fake로 대체.
    - `paramiko>=3.0` → pyproject **런타임** deps에 추가. 로거 `no_gada.source`.
 4. **Docker SFTP 테스트 환경** (회사 서버 없이 127.0.0.1로 실코드 경로 검증):
-   - `remote_server/`(atmoz/sftp): 127.0.0.1:**2222**, 계정 **testuser/testpass**, base=`src`, 픽스처 = `remote_server/files/…/publish_ecams/resource/`.
+   - `remote_ap_server/`(atmoz/sftp): 127.0.0.1:**2222**, 계정 **testuser/testpass**, base=`src`, 픽스처 = `remote_ap_server/files/…/publish_ecams/resource/`.
    - **실접속 검증 완료**: `docker compose up -d` 후 `SftpSourceReader("127.0.0.1", port=2222, user="testuser", password="testpass", base_dir="src")`로 3개 DBIO 픽스처 읽기 성공, 없는 파일→SourceNotFound, 읽은 `<sqlString>`→`extract_tables`→기대 테이블 일치(PFO_STCK_MA_DS200/PFO_FUND_BS_DF037/PFO_MNCM_CLCD_HT_EI901).
 
 ## ⏭️ 다음 (내일)
 - [ ] **`ids.py`**: 실물 경로 규칙(`publish_ecams/resource/<PROG>/<SQLTYPE>/<ID>/<ID>.xml`) 반영. `resolve_path(id_type, id, reader)`는 DBIO를 트리 탐색으로 위치 결정 / `classify(id)`(접미·패턴) / `scan_ref_ids(text)`. ※ Service/Batch/Biz 규칙은 상위 `.c` 실물 확인 후 확정.
-- [ ] **`mapper.py`**: ProFrame DBIO XML → SQL. `ElementTree`로 **`sqlString` 텍스트** 수집(루트 태그 무관), 엔티티/CDATA 해제. **바인드 치환 없음**(이미 `:name`). ※ 픽스처: `remote_server/files/.../{DYNAMICSQL,EXECSQL}/...`.
+- [ ] **`mapper.py`**: ProFrame DBIO XML → SQL. `ElementTree`로 **`sqlString` 텍스트** 수집(루트 태그 무관), 엔티티/CDATA 해제. **바인드 치환 없음**(이미 `:name`). ※ 픽스처: `remote_ap_server/files/.../{DYNAMICSQL,EXECSQL}/...`.
 - [ ] **`source.py` 나열 메서드**: 트리 탐색용 `list`/`glob`를 `SourceReader`에 추가(SFTP `listdir`+fake 구현). ← `resolve_path` DBIO 탐색이 의존.
 - [ ] **`service.py`**: `extract(id_type, id, reader)` + 재귀 `_collect`(visited로 순환 차단, dbio 종료 / 그 외 scan→classify→재귀). 수집 SQL 각각 `extract_tables`→합집합. DBIO 파싱 실패는 skip+warning.
-- [ ] **`router.py` 연결**: 501 제거, 주석부 활성화. `default_reader()`는 env(`NOGADA_SFTP_HOST`/`_PORT`/`_USER`/`_PASS`/`_BASE`)에서 `SftpSourceReader` 생성(기본 `remote_server` Docker SFTP 127.0.0.1:2222/testuser/testpass/base=src). ※ `app/common/source.py`로 이동됨.
+- [ ] **`router.py` 연결**: 501 제거, 주석부 활성화. `default_reader()`는 env(`NOGADA_SFTP_HOST`/`_PORT`/`_USER`/`_PASS`/`_BASE`)에서 `SftpSourceReader` 생성(기본 `remote_ap_server` Docker SFTP 127.0.0.1:2222/testuser/testpass/base=src). ※ `app/common/source.py`로 이동됨.
 - [ ] **프론트 `#te-submit`** fetch 연결(좌 목록/우 SQL 채움, 에러박스/스피너 재사용).
-- [ ] **테스트** `tests/tools/test_table_extractor.py`: 인메모리 fake reader로 단위(재귀/순환/부재/DYNAMICSQL·EXECSQL 루트), Docker SFTP(`remote_server`)로 `SftpSourceReader` 통합.
+- [ ] **테스트** `tests/tools/test_table_extractor.py`: 인메모리 fake reader로 단위(재귀/순환/부재/DYNAMICSQL·EXECSQL 루트), Docker SFTP(`remote_ap_server`)로 `SftpSourceReader` 통합.
 
 ## ⚠️ 원래 계획 대비 바뀐 점 (위 본문과 상충하는 부분은 이 진행상황이 최신)
 - `source.py` 위치: `app/tools/table_extractor/` → **`app/common/source.py`**.
@@ -143,13 +143,13 @@ class ExtractResponse(BaseModel): tables: list[str];  sql: str;  dbios: list[str
 - 라우터 기본 reader: `LocalSourceReader(TE_SOURCE_DIR)` → **`SftpSourceReader`(env, 기본 Docker SFTP 2222)**.
 
 ## 🔴 사용자 제공 현황
-- ✅ **DBIO 실물 확인 완료**(사진→`remote_server` 픽스처): DYNAMICSQL/EXECSQL 포맷, `<sqlString>` 텍스트, Oracle `:name` 바인드. 경로 = `publish_ecams/resource/<PROG>/<SQLTYPE>/<ID>/<ID>.xml`.
+- ✅ **DBIO 실물 확인 완료**(사진→`remote_ap_server` 픽스처): DYNAMICSQL/EXECSQL 포맷, `<sqlString>` 텍스트, Oracle `:name` 바인드. 경로 = `publish_ecams/resource/<PROG>/<SQLTYPE>/<ID>/<ID>.xml`.
 - ⏳ **미제공**: Service/Biz(`.c`) 파일에서 하위 DBIO ID가 박힌 실제 모습 → `classify`/`scan_ref_ids`/Service·Batch 경로 규칙 확정에 필요.
 
 ## 실행 메모
 ```bash
 source .venv/bin/activate && pip install -e ".[dev]"       # paramiko 포함
-(cd remote_server && docker compose up -d)                  # Docker SFTP (127.0.0.1:2222, testuser/testpass)
+(cd remote_ap_server && docker compose up -d)                  # Docker SFTP (127.0.0.1:2222, testuser/testpass)
 # 접속 확인: SftpSourceReader("127.0.0.1", port=2222, user="testuser", password="testpass", base_dir="src").read("truap01dap1/.../PFO_STCK_MA_DS200.xml")
 uvicorn app.main:app --reload                               # 웹앱
 pytest                                                      # 회귀(현재 72개)
@@ -178,7 +178,7 @@ pytest                                                      # 회귀(현재 72�
 > **이 섹션이 최신**이다. 위 2026-08-04·08-08 로그의 `publish_ecams/resource/<PROG>/<SQLTYPE>/<ID>/<ID>.xml` 경로, `read_dbio_xml`에 `prog/resource_group` 인자, `IdType`/`Prog` 명칭은 **모두 아래로 대체**됨.
 
 ## 🔀 DBIO 실물 경로 정정 — 평면 구조
-- 실물 경로는 `publish_ecams/resource/<PROG>/<SQLTYPE>/<ID>/<ID>.xml`이 아니라 **`release/dbio/xml/<ID>.xml`(완전 평면 — PROG·SQLTYPE 하위 없음)**이었다. `remote_server/files/…/`의 DBIO XML 5개(신규 복원 `AIS_ACCSUBJ_BS_VF001` + 기존 `PFO_CLCD_MIP_MA_VF001`·`PFO_FUND_BS_DF037`·`PFO_MNCM_CLCD_HT_EI901`·`PFO_STCK_MA_DS200`)를 이 디렉토리로 이동, 옛 `publish_ecams/` 트리는 제거.
+- 실물 경로는 `publish_ecams/resource/<PROG>/<SQLTYPE>/<ID>/<ID>.xml`이 아니라 **`release/dbio/xml/<ID>.xml`(완전 평면 — PROG·SQLTYPE 하위 없음)**이었다. `remote_ap_server/files/…/`의 DBIO XML 5개(신규 복원 `AIS_ACCSUBJ_BS_VF001` + 기존 `PFO_CLCD_MIP_MA_VF001`·`PFO_FUND_BS_DF037`·`PFO_MNCM_CLCD_HT_EI901`·`PFO_STCK_MA_DS200`)를 이 디렉토리로 이동, 옛 `publish_ecams/` 트리는 제거.
 - **`app/common/dbio.py`**:
   - `DBIO_RESOURCE_ROOT` = `/src/truap01dap1/proframe/proframe5.0/release/dbio/xml`.
   - `read_dbio_xml(file_id, reader)` — **`resource_group` 인자 제거**(평면이라 PROG 불필요). 경로 = `{ROOT}/<ID>.xml` 1회 조합.
