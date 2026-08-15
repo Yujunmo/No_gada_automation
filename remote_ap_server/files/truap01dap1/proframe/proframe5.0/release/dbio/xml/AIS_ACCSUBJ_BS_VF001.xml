@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<viewQuery createTime="2026-04-15 11:47:48.947" creator="261309" logicalName="AINF_개정과목_기본_VF001(코드_브라우저-Paging)" modifier="261309" owner="261309" physicalName="AIS_ACCSUBJ_BS_VF001" projectId="AITAS" resourceGroup="ZINF" resourceId="AIS_ACCSUBJ_BS_VF001" resourcePath="" resourceType="VIEW" revision="12" status="DEV" updateTime="2026-04-15 16:19:34.007" userComment="" xmlns="http://www.tmaxsoft.co.kr/proframe/viewquery">
+    <execType xmlns="">FETCH</execType>
+    <tableName xmlns=""/>
+    <lock xmlns="">false</lock>
+    <waitTime xmlns="">0</waitTime>
+    <inputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>AIS_ACCSUBJ_BS_VF001In</structureId>
+        <structureName>AIS_ACCSUBJ_BS_VF001In</structureName>
+    </inputStructure>
+    <outputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>AIS_ACCSUBJ_BS_VF001Out</structureId>
+        <structureName>AIS_ACCSUBJ_BS_VF001Out</structureName>
+    </outputStructure>
+    <arrayOutputStructure xmlns="">
+        <maxCount>5001</maxCount>
+        <scope>private</scope>
+        <structureId>AIS_ACCSUBJ_BS_VF001BundleOut</structureId>
+        <structureName>AIS_ACCSUBJ_BS_VF001BundleOut</structureName>
+        <baseParameter>AIS_ACCSUBJ_BS_VF001Out</baseParameter>
+    </arrayOutputStructure>
+    <dbProduct xmlns="">ORACLE</dbProduct>
+    <columnSet xmlns="">
+        <column>
+            <columnName>TRGT_CODE</columnName>
+            <alias>trgt_code</alias>
+            <databaseType>VARCHAR2(20)</databaseType>
+            <length>30</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>TRGT_CODE_NAME</columnName>
+            <alias>trgt_code_name</alias>
+            <databaseType>VARCHAR2(100)</databaseType>
+            <length>100</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>lngg_dtcd</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>st1_key_brkd</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>srch_cntn</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>inqy_cscn</alias>
+            <databaseType>number</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+    </columnSet>
+    <sqlString xmlns="">select /*+AIS_ACCSUBJ_BS_VF001*/
+       trgt_code
+     , trgt_code_name
+  from (select trgt_code, trgt_code_name
+          from (select 'XXXXXX' as trgt_code, '이관안함' as trgt_code_name from dual
+                union all
+                select trgt_code, trgt_code_name
+                  from (select t1.accsubj_code       as trgt_code
+                             , case when :lngg_dtcd = 'KR' then t1.accsubj_ensn_uvnm else t1.accsubj_uvnm end as trgt_code_name
+                          from ais_accsubj_bs t1
+                         where t1.ais_fund_dncd = '1'
+                         order by t1.accsubj_code))
+         where (
+                 (trgt_code like '%'||:srch_cntn||'%' )
+              OR
+                 (trgt_code_name like '%'||:srch_cntn||'%' )
+               )
+       )
+ where trgt_code &gt;= :st1_key_brkd
+   and rownum &lt;= :inqy_cscn + 1 /* 조회건수 */</sqlString>
+</viewQuery>

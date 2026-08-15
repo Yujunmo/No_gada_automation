@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dynamicSqlQuery createTime="2025-03-26 16:50:35.536" creator="220113" logicalName="BM사 BM용 참조회" modifier="220113" owner="220113" physicalName="PFO_BM_STUP_TEMPLT_BS_DS011" projectId="AITAS" resourceGroup="PCSP" resourcePath="" resourceType="DYNAMICSQL" revision="4" status="DEV" updateTime="2025-03-26 17:42:07.37" userComment="" xmlns="http://www.tmaxsoft.co.kr/proframe/dynamicsqlquery">
+    <execType xmlns="">SELECT</execType>
+    <tableName xmlns=""/>
+    <lock xmlns="">false</lock>
+    <waitTime xmlns="">0</waitTime>
+    <inputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_BM_STUP_TEMPLT_BS_DS011In</structureId>
+        <structureName>PFO_BM_STUP_TEMPLT_BS_DS011In</structureName>
+    </inputStructure>
+    <outputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_BM_STUP_TEMPLT_BS_DS011Out</structureId>
+        <structureName>PFO_BM_STUP_TEMPLT_BS_DS011Out</structureName>
+    </outputStructure>
+    <maxCount xmlns="">0</maxCount>
+    <dbProduct xmlns="">ORACLE</dbProduct>
+    <dynamicStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_BM_STUP_TEMPLT_BS_DS011Dyn</structureId>
+        <structureName>PFO_BM_STUP_TEMPLT_BS_DS011Dyn</structureName>
+    </dynamicStructure>
+    <sqlString xmlns="">SELECT /*PFO_BM_STUP_TEMPLT_BS_DS011*/
+           t1.bm_templt_code_name as bm_templt_code_name
+           , t1.bm_templt_code as bm_templt_code
+           , t1.st1_formula_name || '('||nvl(t2.stck_wghn_formula_name , '-')||')' as st1_formula_cntn   /* 제1계 산식내용 */
+           , t1.nd2_formula_name || '('||nvl(t2.bond_wghn_formula_name , '-')||')' as nd2_formula_cntn   /* 제2계 산식내용 */
+           , t1.th3_formula_name || '('||nvl(t2.cash_wghn_formula_name , '-')||')' as th3_formula_cntn   /* 제3계 산식내용 */
+           , t1.th4_formula_name || '('||nvl(t2.etc_wghn_formula_name , '-')||')' as th4_formula_cntn   /* 제4계 산식내용 */
+        FROM pfo_clfd_bm_templt_ht  t1
+           , pfo_bm_stup_templt_bs t2
+       WHERE 1=1
+         AND t1.mncm_code   = :mncm_code
+         AND t1.fund_code   = :fund_code
+         AND t1.strn_date = ( SELECT max(strn_date)
+                                 FROM pfo_clfd_bm_templt_ht  tz
+                                WHERE tz.mncm_code = t1.mncm_code
+                                  AND tz.fund_code = t1.fund_code
+                                  AND tz.strn_date &lt;= :end_date )
+         AND t1.mncm_code = t2.mncm_code
+         AND t1.bm_templt_code = t2.bm_templt_code</sqlString>
+    <columnSet xmlns="">
+        <column>
+            <columnName>BM_TEMPLT_CODE</columnName>
+            <alias>bm_templt_code</alias>
+            <databaseType>VARCHAR2(4)</databaseType>
+            <length>4</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>BM_TEMPLT_CODE_NAME</columnName>
+            <alias>bm_templt_code_name</alias>
+            <databaseType>VARCHAR2(1000)</databaseType>
+            <length>1000</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>ST1_FORMULA_CNTN</columnName>
+            <alias>st1_formula_cntn</alias>
+            <databaseType>VARCHAR2(2005)</databaseType>
+            <length>500</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>ND2_FORMULA_CNTN</columnName>
+            <alias>nd2_formula_cntn</alias>
+            <databaseType>VARCHAR2(2005)</databaseType>
+            <length>500</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>TH3_FORMULA_CNTN</columnName>
+            <alias>th3_formula_cntn</alias>
+            <databaseType>VARCHAR2(2005)</databaseType>
+            <length>500</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>TH4_FORMULA_CNTN</columnName>
+            <alias>th4_formula_cntn</alias>
+            <databaseType>VARCHAR2(2005)</databaseType>
+            <length>500</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>mncm_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>fund_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>end_date</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+    </columnSet>
+</dynamicSqlQuery>

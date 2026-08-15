@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dynamicSqlQuery createTime="2025-05-30 16:39:29.761" creator="190344" logicalName="펀드 대차대조표 조회" resourceName="PFO_FUND_BS_DF037" resourcePath="" resourceType="DYNAMICSQL" revision="1" status="C" updateTime="2025-05-30 16:39:29.761">
+    <execType xmlns="">SELECT</execType>
+    <tableName xmlns=""/>
+    <lock xmlns="">false</lock>
+    <waitTime xmlns="">0</waitTime>
+    <inputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_FUND_BS_DF037In</structureId>
+        <structureName>PFO_FUND_BS_DF037In</structureName>
+    </inputStructure>
+    <outputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_FUND_BS_DF037Out</structureId>
+        <structureName>PFO_FUND_BS_DF037Out</structureName>
+    </outputStructure>
+    <maxCount xmlns="">0</maxCount>
+    <dynamicStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_FUND_BS_DF037Dyn</structureId>
+        <structureName>PFO_FUND_BS_DF037Dyn</structureName>
+    </dynamicStructure>
+    <sqlString xmlns="">select t1.mncm_code
+     , t1.fund_code
+     , t1.fund_name
+     , t1.firt_stup_date
+     , t1.trmt_date
+     , t1.stup_amt
+     , t2.nav_amt
+     , t3.revs_stpr
+  from pfo_fund_bs t1
+     , pfo_tami_sm t2
+     , pfo_clfd_revs_stpr_ma t3
+ where t1.mncm_code = :mncm_code
+   and t1.fund_code = :fund_code
+   and t1.mncm_code = t2.mncm_code
+   and t1.fund_code = t2.fund_code
+   and t2.proc_date = :proc_date
+   and t1.mcnm_code = t3.mncm_code
+   and t1.fund_code = t3.fund_code
+   and t2.proc_date = t3.proc_date</sqlString>
+    <columnSet xmlns="">
+        <column>
+            <columnName>MNCM_CODE</columnName>
+            <alias>mncm_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>FUND_CODE</columnName>
+            <alias>fund_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>FUND_NAME</columnName>
+            <alias>fund_name</alias>
+            <databaseType>VARCHAR2(200)</databaseType>
+            <length>200</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>FIRT_STUP_DATE</columnName>
+            <alias>firt_stup_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>TRMT_DATE</columnName>
+            <alias>trmt_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>STUP_AMT</columnName>
+            <alias>stup_amt</alias>
+            <databaseType>NUMBER</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>NAV_AMT</columnName>
+            <alias>nav_amt</alias>
+            <databaseType>NUMBER</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>REVS_STPR</columnName>
+            <alias>revs_stpr</alias>
+            <databaseType>NUMBER</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>mncm_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>fund_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>proc_date</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+    </columnSet>
+</dynamicSqlQuery>

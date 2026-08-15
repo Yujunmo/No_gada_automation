@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dynamicSqlQuery createTime="2025-05-30 16:39:29.761" creator="190344" logicalName="펀드 개요(전일) 조회" resourceName="PFO_FUND_OVRV_PDAY_BS_DS101" resourcePath="" resourceType="DYNAMICSQL" revision="1" status="C" updateTime="2025-05-30 16:39:29.761">
+    <execType xmlns="">SELECT</execType>
+    <tableName xmlns=""/>
+    <lock xmlns="">false</lock>
+    <waitTime xmlns="">0</waitTime>
+    <inputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_FUND_OVRV_PDAY_BS_DS101In</structureId>
+        <structureName>PFO_FUND_OVRV_PDAY_BS_DS101In</structureName>
+    </inputStructure>
+    <outputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_FUND_OVRV_PDAY_BS_DS101Out</structureId>
+        <structureName>PFO_FUND_OVRV_PDAY_BS_DS101Out</structureName>
+    </outputStructure>
+    <maxCount xmlns="">0</maxCount>
+    <dynamicStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_FUND_OVRV_PDAY_BS_DS101Dyn</structureId>
+        <structureName>PFO_FUND_OVRV_PDAY_BS_DS101Dyn</structureName>
+    </dynamicStructure>
+    <sqlString xmlns="">select t1.mncm_code
+     , t1.rprt_fund_code
+     , t1.aply_date
+     , t1.dtl_code
+     , t1.ovrv_cntn
+  from pfo_fund_ovrv_pday_bs t1
+ where t1.mncm_code = :mncm_code
+   and t1.rprt_fund_code = :rprt_fund_code
+   and t1.aply_date = :aply_date
+ order by t1.dtl_code</sqlString>
+    <columnSet xmlns="">
+        <column>
+            <columnName>MNCM_CODE</columnName>
+            <alias>mncm_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>true</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>RPRT_FUND_CODE</columnName>
+            <alias>rprt_fund_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>true</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>APLY_DATE</columnName>
+            <alias>aply_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>true</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>DTL_CODE</columnName>
+            <alias>dtl_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>true</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>OVRV_CNTN</columnName>
+            <alias>ovrv_cntn</alias>
+            <databaseType>VARCHAR2(500)</databaseType>
+            <length>500</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>mncm_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>rprt_fund_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>aply_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+    </columnSet>
+</dynamicSqlQuery>

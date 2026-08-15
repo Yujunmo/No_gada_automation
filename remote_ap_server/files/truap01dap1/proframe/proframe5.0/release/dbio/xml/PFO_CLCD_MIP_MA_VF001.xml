@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<viewQuery createTime="2025-05-30 16:39:29.761" creator="190344" logicalName="펀드 기준가 MIP 조회" modifier="190344" owner="190344" physicalName="PFO_CLCD_MIP_MA_VF001" projectId="AITAS" resourceGroup="PCOM" resourceId="PFO_CLCD_MIP_MA_VF001" resourcePath="" resourceType="VIEW" revision="1" status="C" updateTime="2025-05-30 16:39:29.761" userComment="" versionNo="1.01" xmlns="http://www.tmaxsoft.co.kr/proframe/viewquery">
+    <execType xmlns="">SELECT</execType>
+    <tableName xmlns=""/>
+    <lock xmlns="">false</lock>
+    <waitTime xmlns="">0</waitTime>
+    <inputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_CLCD_MIP_MA_VF001In</structureId>
+        <structureName>PFO_CLCD_MIP_MA_VF001In</structureName>
+    </inputStructure>
+    <outputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_CLCD_MIP_MA_VF001Out</structureId>
+        <structureName>PFO_CLCD_MIP_MA_VF001Out</structureName>
+    </outputStructure>
+    <maxCount xmlns="">0</maxCount>
+    <dbProduct xmlns="">ORACLE</dbProduct>
+    <sqlString xmlns="">select t3.mncm_name,
+       t2.fund_name,
+       t1.nav_amt,
+       t1.tot_amt,
+       (select sum(stup_amt) from pfo_ear_tr tz where tz.mncm_code = t1.mncm_code and tz.fund_code = t1.fund_code and tz.proc_date between :strn_date and :end_date ) as stup_amt
+  from pfo_clfd_mip_ma @dl_patru_Trups t1,
+       pfo_fund_ht @dl_patru_Trups t2,
+       tru_mncm_bs @dl_patru_Trups t3,
+       fep_mjspok t4
+ where t1.mncm_code = :mncm_code
+   and t1.fund_code = :fund_code
+   and t1.proc_Date between :strn_date and :end_date
+   and t1.proc_date = t2.proc_date
+   and t1.mncm_code = t2.mncm_code
+   and t1.fund_code = t2.fund_code
+   and t1.mncm_code = t3.mncm_code
+   and t1.fund_code = t4.fund_code</sqlString>
+    <columnSet xmlns="">
+        <column>
+            <columnName>MNCM_NAME</columnName>
+            <alias>mncm_name</alias>
+            <databaseType>VARCHAR2(200)</databaseType>
+            <length>200</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>FUND_NAME</columnName>
+            <alias>fund_name</alias>
+            <databaseType>VARCHAR2(200)</databaseType>
+            <length>200</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>NAV_AMT</columnName>
+            <alias>nav_amt</alias>
+            <databaseType>NUMBER</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>TOT_AMT</columnName>
+            <alias>tot_amt</alias>
+            <databaseType>NUMBER</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>STUP_AMT</columnName>
+            <alias>stup_amt</alias>
+            <databaseType>NUMBER</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>mncm_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>fund_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>strn_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>end_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+    </columnSet>
+</viewQuery>

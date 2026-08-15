@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dynamicSqlQuery createTime="2025-05-30 16:39:29.761" creator="190344" logicalName="BM 수익률 계산용 이력조회" resourceName="PFO_BM_RNRT_HT_DS103" resourcePath="" resourceType="DYNAMICSQL" revision="1" status="C" updateTime="2025-05-30 16:39:29.761">
+    <execType xmlns="">SELECT</execType>
+    <tableName xmlns=""/>
+    <lock xmlns="">false</lock>
+    <waitTime xmlns="">0</waitTime>
+    <inputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_BM_RNRT_HT_DS103In</structureId>
+        <structureName>PFO_BM_RNRT_HT_DS103In</structureName>
+    </inputStructure>
+    <outputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_BM_RNRT_HT_DS103Out</structureId>
+        <structureName>PFO_BM_RNRT_HT_DS103Out</structureName>
+    </outputStructure>
+    <maxCount xmlns="">0</maxCount>
+    <dynamicStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_BM_RNRT_HT_DS103Dyn</structureId>
+        <structureName>PFO_BM_RNRT_HT_DS103Dyn</structureName>
+    </dynamicStructure>
+    <sqlString xmlns="">select t1.mncm_code
+     , t1.bm_templt_code
+     , t2.bm_templt_code_name
+     , t1.strn_date
+     , t3.revs_stpr
+  from pfo_clfd_bm_templt_ht t1
+     , pfo_bm_stup_templt_bs t2
+     , pfo_clfd_revs_stpr_ma t3
+ where t1.mncm_code = :mncm_code
+   and t1.bm_templt_code = :bm_templt_code
+   and t1.strn_date between :strn_date and :end_date
+   and t1.mncm_code = t2.mncm_code
+   and t1.bm_templt_code = t2.bm_templt_code
+   and t1.mncm_code = t3.mncm_code
+   and t1.strn_date = t3.proc_date
+ order by t1.strn_date</sqlString>
+    <columnSet xmlns="">
+        <column>
+            <columnName>MNCM_CODE</columnName>
+            <alias>mncm_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>BM_TEMPLT_CODE</columnName>
+            <alias>bm_templt_code</alias>
+            <databaseType>VARCHAR2(4)</databaseType>
+            <length>4</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>BM_TEMPLT_CODE_NAME</columnName>
+            <alias>bm_templt_code_name</alias>
+            <databaseType>VARCHAR2(1000)</databaseType>
+            <length>1000</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>STRN_DATE</columnName>
+            <alias>strn_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>REVS_STPR</columnName>
+            <alias>revs_stpr</alias>
+            <databaseType>NUMBER</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>mncm_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>bm_templt_code</alias>
+            <databaseType>VARCHAR2(4)</databaseType>
+            <length>4</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>strn_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>end_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+    </columnSet>
+</dynamicSqlQuery>

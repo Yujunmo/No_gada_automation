@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dynamicSqlQuery createTime="2025-05-30 16:39:29.761" creator="190344" logicalName="펀드 기본정보 단건조회" resourceName="PFO_FUND_BS_DF036" resourcePath="" resourceType="DYNAMICSQL" revision="1" status="C" updateTime="2025-05-30 16:39:29.761">
+    <execType xmlns="">SELECT</execType>
+    <tableName xmlns=""/>
+    <lock xmlns="">false</lock>
+    <waitTime xmlns="">0</waitTime>
+    <inputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_FUND_BS_DF036In</structureId>
+        <structureName>PFO_FUND_BS_DF036In</structureName>
+    </inputStructure>
+    <outputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_FUND_BS_DF036Out</structureId>
+        <structureName>PFO_FUND_BS_DF036Out</structureName>
+    </outputStructure>
+    <maxCount xmlns="">0</maxCount>
+    <dynamicStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_FUND_BS_DF036Dyn</structureId>
+        <structureName>PFO_FUND_BS_DF036Dyn</structureName>
+    </dynamicStructure>
+    <sqlString xmlns="">select t1.mncm_code
+     , t1.fund_code
+     , t1.fund_name
+     , t1.firt_stup_date
+     , t1.trmt_date
+  from pfo_fund_bs t1
+ where t1.mncm_code = :mncm_code
+   and t1.fund_code = :fund_code</sqlString>
+    <columnSet xmlns="">
+        <column>
+            <columnName>MNCM_CODE</columnName>
+            <alias>mncm_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>FUND_CODE</columnName>
+            <alias>fund_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>FUND_NAME</columnName>
+            <alias>fund_name</alias>
+            <databaseType>VARCHAR2(200)</databaseType>
+            <length>200</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>FIRT_STUP_DATE</columnName>
+            <alias>firt_stup_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>TRMT_DATE</columnName>
+            <alias>trmt_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>mncm_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>fund_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+    </columnSet>
+</dynamicSqlQuery>

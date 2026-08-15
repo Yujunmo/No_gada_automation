@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<viewQuery createTime="2023-07-06 10:00:00.0" creator="151397" logicalName="일자관리기본 영업일조회(이전 휴장포함 당일미포함)" modifier="151397" owner="151397" physicalName="PFO_DATE_MNGM_BS_VS009" projectId="AITAS" resourceGroup="PCOM" resourceId="PFO_DATE_MNGM_BS_VS009" resourcePath="" resourceType="VIEW" revision="1" status="C" updateTime="2023-07-06 10:00:00.0" userComment="" versionNo="1.01" xmlns="http://www.tmaxsoft.co.kr/proframe/viewquery">
+    <execType xmlns="">SELECT</execType>
+    <tableName xmlns=""/>
+    <lock xmlns="">false</lock>
+    <waitTime xmlns="">0</waitTime>
+    <inputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_DATE_MNGM_BS_VS009In</structureId>
+        <structureName>PFO_DATE_MNGM_BS_VS009In</structureName>
+    </inputStructure>
+    <outputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_DATE_MNGM_BS_VS009Out</structureId>
+        <structureName>PFO_DATE_MNGM_BS_VS009Out</structureName>
+    </outputStructure>
+    <maxCount xmlns="">0</maxCount>
+    <dbProduct xmlns="">ORACLE</dbProduct>
+    <sqlString xmlns="">SELECT bzop_date
+  FROM pfo_date_mngm_bs
+ WHERE prsn_date &lt; :prsn_date
+   AND rownum = 1
+ ORDER BY bzop_date DESC</sqlString>
+    <columnSet xmlns="">
+        <column>
+            <columnName>BZOP_DATE</columnName>
+            <alias>bzop_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>prsn_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+    </columnSet>
+</viewQuery>
