@@ -510,7 +510,7 @@
         }
     }
 
-    function renderTables(tables) {
+    function renderTables(tables, batches) {
         // FEP 접두사 테이블은 메인 목록에서 빼고 아래 별도 섹션에 읽기 전용으로 표시
         var fepTables = tables.filter(function (t) { return t.indexOf('FEP') === 0; });
         allMainTables = tables.filter(function (t) { return t.indexOf('FEP') !== 0; });
@@ -521,6 +521,19 @@
                 <div class="te-fep-list">
                     ${fepTables.map(function (t) {
                         return '<div class="te-fep-item" title="' + escapeHtml(t) + '">' + escapeHtml(t) + '</div>';
+                    }).join('')}
+                </div>
+            </div>
+        ` : '';
+
+        // 발견된 batch 참조 — 재귀 중 참조만 되고 소스는 안 들여다본 배치 ID. 발견됐을 때만 칸이 생긴다.
+        batches = batches || [];
+        var batchSection = batches.length ? `
+            <div class="te-batch-section">
+                <div class="te-batch-title">발견된 batch <span class="count-badge">${batches.length}개</span> <span class="te-batch-note">참조된 배치는 직접 조회 요청. 자동 참조 기능 지원안함</span></div>
+                <div class="te-batch-list">
+                    ${batches.map(function (b) {
+                        return '<div class="te-batch-item" title="' + escapeHtml(b) + '">' + escapeHtml(b) + '</div>';
                     }).join('')}
                 </div>
             </div>
@@ -544,6 +557,7 @@
             </div>
             <div class="te-table-list" id="te-table-list"></div>
             ${fepSection}
+            ${batchSection}
         `;
 
         var listEl = resultEl.querySelector('#te-table-list');
@@ -663,11 +677,15 @@
             }
 
             // 우측 '이관 sql' 박스(textarea)는 다음 단계에서 구현 — 지금은 채우지 않는다.
-            if (!data.tables || data.tables.length === 0) {
+            // 테이블이 0개여도 batch 참조가 있으면(예: 배치 소스만 있고 내부 DBIO 픽스처가
+            // 아직 없는 경우) 그 목록은 보여줘야 하므로, 둘 다 비었을 때만 완전 empty 처리한다.
+            var tables = data.tables || [];
+            var batches = data.batches || [];
+            if (tables.length === 0 && batches.length === 0) {
                 showEmpty('추출된 테이블이 없습니다.');
                 return;
             }
-            renderTables(data.tables);
+            renderTables(tables, batches);
 
         } catch (e) {
             showError('서버 요청 실패', e.message);

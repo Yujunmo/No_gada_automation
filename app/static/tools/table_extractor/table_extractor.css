@@ -169,7 +169,7 @@
     font-family: inherit;
     font-size: 13px;
     height: 30px;
-    width: 140px;
+    width: 280px;
     padding: 0 10px;
     border: 1px solid var(--border-color);
     border-radius: 6px;
@@ -290,6 +290,47 @@
 }
 
 .te-fep-item {
+    padding: 8px 12px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 발견된 batch 참조 별도 섹션 (재귀 중 참조만 되고 소스는 안 들여다본 배치 ID) */
+.te-batch-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.te-batch-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.te-batch-note {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+.te-batch-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+}
+
+.te-batch-item {
     padding: 8px 12px;
     background: #ffffff;
     border: 1px solid var(--border-color);
