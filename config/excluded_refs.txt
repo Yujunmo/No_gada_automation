@@ -7,3 +7,6 @@
 # 경로를 바꾸려면 NOGADA_EXCLUDED_REFS_PATH 환경변수 사용.
 
 MZPFM_BatchLinkCall  # batch 간접호출용 고정 biz 모듈 — 소스 파일이 없어 항상 SourceNotFound로 skip되므로 미리 제외
+MZCOM_GetSeqNo
+MMCMP_ProcJobFundCrtn
+TRU_CMN_SRCH_SLCT_TM_EI001
