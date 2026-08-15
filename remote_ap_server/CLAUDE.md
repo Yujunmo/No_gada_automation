@@ -1,4 +1,4 @@
-# CLAUDE.md — remote_server/
+# CLAUDE.md — remote_ap_server/
 
 이 디렉토리는 `table_extractor`의 원격 파일 가져오기를 검증하기 위한 **테스트용 SFTP 서버**다.
 실제 회사 서버 프로토콜이 SFTP(SSH)라, 그 접속 경로를 로컬 Docker로 리허설한다.
@@ -50,7 +50,7 @@ docker compose logs -f sftp   # 로그
 docker compose down           # 정지
 
 # 컨테이너 내부 셸 (SSH 아님 — 이 이미지는 SFTP 전용)
-docker exec -it remote_server-sftp-1 /bin/sh
+docker exec -it remote_ap_server-sftp-1 /bin/sh
 
 # 수동 SFTP
 sftp -P 2222 testuser@127.0.0.1

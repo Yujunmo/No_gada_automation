@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<viewQuery createTime="2026-06-18 10:00:00.0" creator="151422" logicalName="펀드 정보 이력 배치생성 다건조회" modifier="151422" owner="151422" physicalName="PFO_FUND_INFR_HT_VF721" projectId="AITAS" resourceGroup="RLGR" resourceId="PFO_FUND_INFR_HT_VF721" resourcePath="" resourceType="VIEW" revision="1" status="C" updateTime="2026-06-18 10:00:00.0" userComment="" versionNo="1.01" xmlns="http://www.tmaxsoft.co.kr/proframe/viewquery">
+    <execType xmlns="">SELECT</execType>
+    <tableName xmlns=""/>
+    <lock xmlns="">false</lock>
+    <waitTime xmlns="">0</waitTime>
+    <inputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_FUND_INFR_HT_VF721In</structureId>
+        <structureName>PFO_FUND_INFR_HT_VF721In</structureName>
+    </inputStructure>
+    <outputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>PFO_FUND_INFR_HT_VF721Out</structureId>
+        <structureName>PFO_FUND_INFR_HT_VF721Out</structureName>
+    </outputStructure>
+    <maxCount xmlns="">0</maxCount>
+    <dbProduct xmlns="">ORACLE</dbProduct>
+    <sqlString xmlns="">select t1.mncm_code
+     , t1.fund_code
+     , t1.trst_dncd
+     , t1.trteco_code
+  from pfo_fund_infr_ht t1
+ where t1.mncm_code = :mncm_code
+   and t1.proc_date between :strn_date and :end_date
+   and t1.fund_code like decode(:fund_code, '*', '%', :fund_code)
+   and t1.trst_dncd like decode(:trst_dncd, '*', '%', :trst_dncd)
+   and t1.trteco_code like decode(:trteco_code, '*', '%', :trteco_code)</sqlString>
+    <columnSet xmlns="">
+        <column>
+            <columnName>MNCM_CODE</columnName>
+            <alias>mncm_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>FUND_CODE</columnName>
+            <alias>fund_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>TRST_DNCD</columnName>
+            <alias>trst_dncd</alias>
+            <databaseType>char</databaseType>
+            <length>2</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>TRTECO_CODE</columnName>
+            <alias>trteco_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>strn_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>end_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+    </columnSet>
+</viewQuery>

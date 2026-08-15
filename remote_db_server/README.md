@@ -2,7 +2,7 @@
 
 노가다 앱이 **데이터를 조회해오는 대상 DB**를 로컬에서 리허설하는 서버(Docker MySQL 8).
 실제 반입 시에는 회사 서버(Oracle)에 붙지만, 용도가 **단순 조회**라 방언 차이가 없어 테스트는
-MySQL로 갈음한다. 앱은 드라이버/접속정보만 교체하면 된다(`remote_server`의 SFTP `SourceReader`와 동일한 구조).
+MySQL로 갈음한다. 앱은 드라이버/접속정보만 교체하면 된다(`remote_ap_server`의 SFTP `SourceReader`와 동일한 구조).
 
 ## 접속 정보
 
@@ -48,6 +48,8 @@ docker compose down -v        # 정지 + 볼륨 삭제 (다음 기동 시 init/ 
 ```bash
 # 컨테이너 내부 mysql 클라이언트로 바로 확인 (호스트에 mysql 미설치여도 됨)
 docker compose exec mysql mysql -utestuser -ptestpass nogada -e "SELECT * FROM all_tables;"
+docker exec -it remote_db_server-mysql-1 /bin/sh
+mysql -utestuser -ptestpass nogada
 
 # 호스트에 mysql 클라이언트가 있으면
 mysql -h 127.0.0.1 -P 3306 -utestuser -ptestpass nogada

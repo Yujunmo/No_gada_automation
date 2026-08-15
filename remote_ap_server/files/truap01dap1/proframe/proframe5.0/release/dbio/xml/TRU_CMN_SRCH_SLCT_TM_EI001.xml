@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<execSqlQuery createTime="2026-06-18 10:00:00.0" creator="151422" logicalName="공통검색선택임시 코드선택 다건입력" modifier="151422" owner="151422" physicalName="TRU_CMN_SRCH_SLCT_TM_EI001" projectId="AITAS" resourceGroup="RLGR" resourceId="TRU_CMN_SRCH_SLCT_TM_EI001" resourcePath="" resourceType="EXECSQL" revision="1" status="C" updateTime="2026-06-18 10:00:00.0" userComment="" versionNo="1.01" xmlns="http://www.tmaxsoft.co.kr/proframe/execsqlquery">
+    <execType xmlns="">INSERT</execType>
+    <tableName xmlns="">TRU_CMN_SRCH_SLCT_TM</tableName>
+    <lock xmlns="">false</lock>
+    <waitTime xmlns="">0</waitTime>
+    <inputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>TRU_CMN_SRCH_SLCT_TM_EI001In</structureId>
+        <structureName>TRU_CMN_SRCH_SLCT_TM_EI001In</structureName>
+    </inputStructure>
+    <outputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>TRU_CMN_SRCH_SLCT_TM_EI001Out</structureId>
+        <structureName>TRU_CMN_SRCH_SLCT_TM_EI001Out</structureName>
+    </outputStructure>
+    <maxCount xmlns="">0</maxCount>
+    <dbProduct xmlns="">ORACLE</dbProduct>
+    <sqlString xmlns="">insert into tru_cmn_srch_slct_tm (
+       code_slct_code
+     , mncm_code
+     , clmn_id
+     , dtl_code
+     , st1_dtl_code
+     , nd2_dtl_code
+     , th3_dtl_code
+     , th4_dtl_code
+     , th5_dtl_code
+     , th6_dtl_code
+     , th7_dtl_code
+     , th8_dtl_code
+     , th9_dtl_code
+     , th10_dtl_code
+) values (
+       :code_slct_code
+     , :mncm_code
+     , :clmn_id
+     , :dtl_code
+     , :st1_dtl_code
+     , :nd2_dtl_code
+     , :th3_dtl_code
+     , :th4_dtl_code
+     , :th5_dtl_code
+     , :th6_dtl_code
+     , :th7_dtl_code
+     , :th8_dtl_code
+     , :th9_dtl_code
+     , :th10_dtl_code
+)</sqlString>
+    <columnSet xmlns="">
+        <column>
+            <columnName/>
+            <alias>code_slct_code</alias>
+            <databaseType>VARCHAR2(30)</databaseType>
+            <length>30</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>mncm_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>clmn_id</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>dtl_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>st1_dtl_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>nd2_dtl_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>th3_dtl_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>th4_dtl_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>th5_dtl_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>th6_dtl_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>th7_dtl_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>th8_dtl_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>th9_dtl_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>th10_dtl_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+    </columnSet>
+</execSqlQuery>

@@ -30,7 +30,7 @@ files/                       →  로그인 후 src/
 ## 사용법
 
 ```bash
-cd remote_server
+cd remote_ap_server
 docker compose up -d       # 기동
 docker compose ps          # 상태 확인
 docker compose logs -f sftp   # 로그

@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<viewQuery createTime="2026-06-18 10:00:00.0" creator="151422" logicalName="RLGR_RLGR_임시(제안서_대상펀드리스트) 다건조회" modifier="151422" owner="151422" physicalName="RPT_RLGR_TM_VF701" projectId="AITAS" resourceGroup="RLGR" resourceId="RPT_RLGR_TM_VF701" resourcePath="" resourceType="VIEW" revision="1" status="C" updateTime="2026-06-18 10:00:00.0" userComment="" versionNo="1.01" xmlns="http://www.tmaxsoft.co.kr/proframe/viewquery">
+    <execType xmlns="">SELECT</execType>
+    <tableName xmlns=""/>
+    <lock xmlns="">false</lock>
+    <waitTime xmlns="">0</waitTime>
+    <inputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>RPT_RLGR_TM_VF701In</structureId>
+        <structureName>RPT_RLGR_TM_VF701In</structureName>
+    </inputStructure>
+    <outputStructure xmlns="">
+        <scope>private</scope>
+        <structureId>RPT_RLGR_TM_VF701Out</structureId>
+        <structureName>RPT_RLGR_TM_VF701Out</structureName>
+    </outputStructure>
+    <maxCount xmlns="">0</maxCount>
+    <dbProduct xmlns="">ORACLE</dbProduct>
+    <sqlString xmlns="">select btch_uniq_id
+     , st1_ltrs_cntn
+     , nd2_ltrs_cntn
+     , th3_ltrs_cntn
+     , st1_date
+     , nd2_date
+     , st1_ntgr_amt
+     , nd2_ntgr_amt
+     , th3_ntgr_amt
+     , st1_dcpn_number_amt
+     , nd2_dcpn_number_amt
+  from rpt_rlgr_tm
+ where mncm_code    = :mncm_code
+   and prgm_id      = :prgm_id
+   and user_id      = :user_id
+   and trns_unq_id  = :trns_unq_id
+ order by btch_uniq_id</sqlString>
+    <columnSet xmlns="">
+        <column>
+            <columnName>BTCH_UNIQ_ID</columnName>
+            <alias>btch_uniq_id</alias>
+            <databaseType>VARCHAR2(40)</databaseType>
+            <length>40</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>true</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>ST1_LTRS_CNTN</columnName>
+            <alias>st1_ltrs_cntn</alias>
+            <databaseType>VARCHAR2(500)</databaseType>
+            <length>500</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>ND2_LTRS_CNTN</columnName>
+            <alias>nd2_ltrs_cntn</alias>
+            <databaseType>VARCHAR2(500)</databaseType>
+            <length>500</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>TH3_LTRS_CNTN</columnName>
+            <alias>th3_ltrs_cntn</alias>
+            <databaseType>VARCHAR2(500)</databaseType>
+            <length>500</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>ST1_DATE</columnName>
+            <alias>st1_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>ND2_DATE</columnName>
+            <alias>nd2_date</alias>
+            <databaseType>char</databaseType>
+            <length>8</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>ST1_NTGR_AMT</columnName>
+            <alias>st1_ntgr_amt</alias>
+            <databaseType>NUMBER</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>ND2_NTGR_AMT</columnName>
+            <alias>nd2_ntgr_amt</alias>
+            <databaseType>NUMBER</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>TH3_NTGR_AMT</columnName>
+            <alias>th3_ntgr_amt</alias>
+            <databaseType>NUMBER</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>ST1_DCPN_NUMBER_AMT</columnName>
+            <alias>st1_dcpn_number_amt</alias>
+            <databaseType>NUMBER</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName>ND2_DCPN_NUMBER_AMT</columnName>
+            <alias>nd2_dcpn_number_amt</alias>
+            <databaseType>NUMBER</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>mncm_code</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>prgm_id</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>user_id</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+        <column>
+            <columnName/>
+            <alias>trns_unq_id</alias>
+            <databaseType>char</databaseType>
+            <length>0</length>
+            <sqlExpression/>
+            <isNullable>false</isNullable>
+            <isPK>false</isPK>
+            <isUniqueKey>false</isUniqueKey>
+        </column>
+    </columnSet>
+</viewQuery>
