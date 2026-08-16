@@ -1,0 +1,14 @@
+# ID → 업무그룹 매핑 (find 폴백 가속용, 없어도 동작에는 문제 없음 — 순차 탐색으로 폴백)
+#
+# 한 줄에 `ID	GROUP	MODULE_TYPE`. `#` 뒤는 주석. 빈 줄 무시.
+# 사람이 직접 편집하지 말 것 — scripts/build_module_group_map.py로 재생성.
+# 로더: app/common/module_src.py::load_group_map
+# 경로를 바꾸려면 NOGADA_MODULE_GROUP_MAP_PATH 환경변수 사용.
+
+MPCOM_CalcBmRnrt	PCOM	biz
+MPCOM_CalcFndRntn	PCOM	biz
+MPCOM_GetBzopDate	PCOM	biz
+MPCOM_InsFndTmp	RLGR	biz
+SPCSP53619A	PCSP	service
+SPCSP53619C	PCSP	service
+SRLGR96602A	RLGR	service

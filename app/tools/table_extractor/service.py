@@ -7,7 +7,7 @@ from typing import Optional
 from app.common import schema
 from app.common.db import DbClient
 from app.common.dbio import UnknownSqlType, read_dbio_xml
-from app.common.module_src import read_module_source
+from app.common.module_src import load_group_map, read_module_source
 from app.common.proframe import Module_Type, ResourceGroup
 from app.common.sql import ExtractionError, extract_tables
 from app.common.source import SourceError, SourceNotFound, SourceReader
@@ -61,6 +61,7 @@ def extract_from_module(
     reader: SourceReader,
     visited: Optional[set[str]] = None,
     excluded: Optional[set[str]] = None,
+    group_map: Optional[dict[tuple[str, str], str]] = None,
 ) -> ExtractResult:
     """service/batch/biz 모듈 → 참조를 재귀적으로 따라가 도달한 DBIO의 SQL/테이블을 합산.
 
@@ -72,16 +73,23 @@ def extract_from_module(
     excluded(설정 파일 기반 항상-제외 ID 집합)는 재귀 중 "만나는" 참조에만 적용된다 —
     최상위 진입 모듈(top_level) 자체는 이 목록과 무관하게 항상 처리한다. 최초 호출 시
     None이면 load_excluded_refs()로 1회 로드해 재귀 전체에 그대로 전달한다.
+
+    group_map(ID→업무그룹 사전 매핑, 있으면 read_module_source의 find 폴백을 가속)도
+    excluded와 동일하게 최초 호출 시 load_group_map()으로 1회 로드해 재귀 전체에 그대로
+    전달한다 — 매핑에 없거나 틀려도 read_module_source가 순차 탐색으로 알아서 폴백하므로
+    안전하다.
     """
     top_level = visited is None
     if visited is None:
         visited = set()
     if excluded is None:
         excluded = load_excluded_refs()
+    if group_map is None:
+        group_map = load_group_map()
     visited.add(file_id)
 
     try:
-        text = read_module_source(module_type, file_id, reader, resource_group=resource_group)
+        text = read_module_source(module_type, file_id, reader, resource_group=resource_group, group_map=group_map)
     except (SourceNotFound, SourceError) as e:
         if top_level:
             raise
@@ -129,7 +137,9 @@ def extract_from_module(
                 continue
         else:
             # 재귀 중 발견된 참조는 업무그룹을 모르므로 resource_group=None → find.
-            result = extract_from_module(ref_type, None, ref_id, reader, visited=visited, excluded=excluded)
+            result = extract_from_module(
+                ref_type, None, ref_id, reader, visited=visited, excluded=excluded, group_map=group_map
+            )
 
         tables.update(result.tables)
         if result.sql:
