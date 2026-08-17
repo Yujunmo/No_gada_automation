@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import os
 
-from app.common.proframe import PROFRAME_ROOT, Module_Type
-from app.common.source import SourceNotFound, SourceReader
+from app.common.io.sftp import SourceNotFound, SourceReader
+from app.common.proframe.types import PROFRAME_ROOT, Module_Type
 
 COMPILE_ROOT = f"{PROFRAME_ROOT}/compile"
 MODULE_SUBDIR = {"service": "serviceModule", "batch": "batch", "biz": "module"}

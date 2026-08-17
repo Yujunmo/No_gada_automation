@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.common.sql import ExtractionError, extract_tables
+from app.common.parse.sql import ExtractionError, extract_tables
 
 
 @pytest.mark.parametrize(

@@ -2,7 +2,7 @@
 
 `all_tables`(테이블명 → PK 컬럼명 매핑, 복합키는 테이블당 여러 행)를 조회해 "테이블별 PK 컬럼"을
 돌려준다. DB I/O 자체는 `db.py`(`DbClient.query`)에 있고, 이 모듈은 그 위에 얹힌 딕셔너리 조회
-도메인 로직이다(`dbio.read_dbio_xml`이 `source.py` 위에 얹힌 것과 동일 구조). table_extractor가
+도메인 로직이다(`dbio.read_dbio_xml`이 `io/sftp.py` 위에 얹힌 것과 동일 구조). table_extractor가
 먼저 쓰지만 "테이블 → PK 컬럼"은 다른 툴(예: Migration Builder)에서도 필요할 범용 동작이라 공용에 둔다.
 """
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Sequence
 
-from app.common.db import DbClient
+from app.common.io.db import DbClient
 
 logger = logging.getLogger("no_gada.schema")
 

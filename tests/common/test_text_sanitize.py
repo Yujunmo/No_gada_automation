@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.common.text import sanitize_text
+from app.common.parse.text_sanitize import sanitize_text
 
 
 def test_zero_width_space_removed() -> None:

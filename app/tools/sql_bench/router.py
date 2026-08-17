@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.common.sql import ExtractionError, extract_tables
+from app.common.parse.sql import ExtractionError, extract_tables
 
 logger = logging.getLogger("no_gada.sql_bench")
 

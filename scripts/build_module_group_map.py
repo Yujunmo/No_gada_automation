@@ -16,20 +16,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.common import module_src
-from app.common.source import default_reader
+from app.common.io.sftp import default_reader
+from app.common.proframe import module_source
 
 
 def main() -> None:
     gen = default_reader()
     reader = next(gen)
     try:
-        group_map = module_src.build_group_map(reader)
+        group_map = module_source.build_group_map(reader)
     finally:
         gen.close()
 
-    module_src.write_group_map(group_map, module_src.DEFAULT_GROUP_MAP_PATH)
-    print(f"{len(group_map)}개 항목 기록: {module_src.DEFAULT_GROUP_MAP_PATH}")
+    module_source.write_group_map(group_map, module_source.DEFAULT_GROUP_MAP_PATH)
+    print(f"{len(group_map)}개 항목 기록: {module_source.DEFAULT_GROUP_MAP_PATH}")
 
 
 if __name__ == "__main__":

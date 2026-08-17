@@ -6,7 +6,7 @@ import re
 import sqlglot
 from sqlglot import exp
 
-from app.common.text import sanitize_text
+from app.common.parse.text_sanitize import sanitize_text
 
 logger = logging.getLogger("no_gada.sql")
 

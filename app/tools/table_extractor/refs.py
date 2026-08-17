@@ -15,14 +15,14 @@ batch만 예외: 전용 콜 매크로가 없다. 배치는 항상 고정된 biz 
 
 ProFrame 코드젠은 실행되지 않는 예시 코드를 `//`/`/* */`로 통째로 주석 처리해 남겨두는데
 그 안에도 콜 매크로 형태 그대로인 죽은 코드가 들어 있어(실물 SPCSP53619C.c 450번 줄 실증)
-정규식 매칭 전 `csource.strip_comments`로 주석을 반드시 제거한다.
+정규식 매칭 전 `c_source.strip_comments`로 주석을 반드시 제거한다.
 """
 from __future__ import annotations
 
 import logging
 import re
 
-from app.common.csource import strip_comments
+from app.common.parse.c_source import strip_comments
 from app.common.proframe import Module_Type
 
 logger = logging.getLogger("no_gada.table_extractor")

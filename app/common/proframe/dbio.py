@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import re
 
-from app.common.proframe import PROFRAME_ROOT
-from app.common.source import SourceReader
+from app.common.io.sftp import SourceReader
+from app.common.proframe.types import PROFRAME_ROOT
 
 # DBIO 리소스 위치 규칙: release/dbio/xml/<ID>.xml (평면 구조 — PROG/SQLTYPE 하위 없음).
 DBIO_RESOURCE_ROOT = f"{PROFRAME_ROOT}/release/dbio/xml"

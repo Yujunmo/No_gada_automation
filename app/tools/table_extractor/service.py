@@ -4,13 +4,13 @@ import logging
 from dataclasses import dataclass, field
 from typing import Optional
 
-from app.common import schema
-from app.common.db import DbClient
-from app.common.dbio import UnknownSqlType, read_dbio_xml
-from app.common.module_src import load_group_map, read_module_source
+from app.common.io.db import DbClient
+from app.common.io.sftp import SourceError, SourceNotFound, SourceReader
+from app.common.parse.sql import ExtractionError, extract_tables
 from app.common.proframe import Module_Type, ResourceGroup
-from app.common.sql import ExtractionError, extract_tables
-from app.common.source import SourceError, SourceNotFound, SourceReader
+from app.common.proframe import db_schema
+from app.common.proframe.dbio import UnknownSqlType, read_dbio_xml
+from app.common.proframe.module_source import load_group_map, read_module_source
 from app.tools.table_extractor import mapper, migrate
 from app.tools.table_extractor.excludes import load_excluded_refs
 from app.tools.table_extractor.refs import scan_module_refs
@@ -164,6 +164,6 @@ def migrate_sql(
     라우터가 HTTP 상태로 매핑한다.
     """
     norm = [t.strip().upper() for t in tables if t.strip()]
-    pk_map = schema.fetch_pk_columns(norm, db)
+    pk_map = db_schema.fetch_pk_columns(norm, db)
     logger.debug("service.migrate_sql: 테이블 %d개, PK 조회 완료", len(norm))
     return migrate.build_migration_sql(norm, pk_map, keys, from_link=from_link, to_link=to_link)

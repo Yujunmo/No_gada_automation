@@ -7,12 +7,12 @@ from pydantic import BaseModel
 
 from typing import Literal, Optional
 
-from app.common import schema
-from app.common.db import DbClient, DbError, QueryError, default_db
-from app.common.dbio import UnknownSqlType
+from app.common.io.db import DbClient, DbError, QueryError, default_db
+from app.common.io.sftp import SourceError, SourceNotFound, SourceReader, default_reader
+from app.common.parse.sql import ExtractionError
 from app.common.proframe import Module_Type, ResourceGroup
-from app.common.sql import ExtractionError
-from app.common.source import SourceError, SourceNotFound, SourceReader, default_reader
+from app.common.proframe import db_schema
+from app.common.proframe.dbio import UnknownSqlType
 from app.tools.table_extractor import migrate, service
 
 logger = logging.getLogger("no_gada.table_extractor")
@@ -118,7 +118,7 @@ def pk_columns(req: PkRequest, db: DbClient = Depends(default_db)) -> PkResponse
     """추출된 테이블 목록 → 테이블별 PK 컬럼(all_tables 딕셔너리 조회). 부작용 없는 조회."""
     logger.info("pks 요청 수신: 테이블 %d개", len(req.tables))
     try:
-        pks = schema.fetch_pk_columns(req.tables, db)
+        pks = db_schema.fetch_pk_columns(req.tables, db)
     except DbError as e:
         logger.warning("pks 실패(DB 접속): %s", e)
         raise HTTPException(status_code=503, detail=str(e))
