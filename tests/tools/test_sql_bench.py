@@ -308,6 +308,24 @@ def test_multiple_statements_supported() -> None:
     assert extract_tables("SELECT * FROM emp; DELETE FROM emp;") == ["EMP"]
 
 
+def test_dblink_with_space_before_at_supported() -> None:
+    # @dblink 앞뒤 공백이 있어도(실제 Oracle은 허용) 전처리로 제거 후 정상 추출
+    sql = (
+        "select *\n"
+        "from pfo_fund_bs @dl_patru_Trups t1,\n"
+        "     pfo_stck_ma @dl_patru_trups t2,\n"
+        "     tru_stck_itms_ht @dl_patru_Trups t3\n"
+        "where t1.mncm_code = t2.mncm_code\n"
+        " and t1.itms_code = t3.itms_code"
+    )
+    assert extract_tables(sql) == ["PFO_FUND_BS", "PFO_STCK_MA", "TRU_STCK_ITMS_HT"]
+
+
+def test_at_in_string_literal_not_treated_as_dblink() -> None:
+    # 문자열 리터럴 안의 @(이메일 등)는 db link로 오인·훼손되지 않는다
+    assert extract_tables("SELECT * FROM emp WHERE email = 'a@b.com'") == ["EMP"]
+
+
 def test_invalid_sql_raises_with_details() -> None:
     # 19. 파싱 실패
     with pytest.raises(ExtractionError) as exc_info:

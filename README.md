@@ -78,7 +78,7 @@ GET /table-extractor/{module_type}/{file_id}                    # dbio (resource
 GET /table-extractor/{module_type}/{resource_group}/{file_id}    # service/batch/biz (재귀)
   dbio:
     ↓ dbio.read_dbio_xml()   ID 끝 2글자로 SQLTYPE 검증 → release/dbio/xml/<ID>.xml (SFTP, 평면 배치)
-    ↓ mapper.extract_sql()   published XML의 <sqlString> 수집
+    ↓ dbio_sql.extract_sql()   published XML의 <sqlString> 수집
     ↓ extract_tables()       각 SQL의 참조 테이블 합집합
   service/batch/biz:
     ↓ module_src.read_module_source()  compile/<업무그룹>/src/... 에서 .c 소스 조회
@@ -119,7 +119,7 @@ POST /table-extractor/migrate-sql  {tables, from_link, to_link, keys} → {sql, 
 │   ├── tools/
 │   │   ├── sql_bench/router.py     # SQL 텍스트 → 테이블
 │   │   └── table_extractor/        # 라우터 / 오케스트레이션 / 파서 / 이관 SQL 생성(순수)
-│   │       ├── router.py  service.py  mapper.py  migrate.py
+│   │       ├── router.py  service.py  dbio_sql.py  migrate.py
 │   │       ├── refs.py             #   scan_module_refs (.c 소스 → 참조 dbio/biz/service/batch ID)
 │   │       └── excludes.py         #   load_excluded_refs (재귀 참조 항상-제외 ID 목록)
 │   └── static/                     # UI (프레임워크 없음, 순수 JS)

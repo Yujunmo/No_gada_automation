@@ -1,4 +1,4 @@
-"""C 소스 텍스트 → 타입 포함 참조 스캔 (mapper.py의 자매, table_extractor 전용).
+"""C 소스 텍스트 → 타입 포함 참조 스캔 (dbio_sql.py의 자매, table_extractor 전용).
 
 service/batch/biz 모듈 C 소스 안에서 다른 모듈/DBIO를 참조하는 콜 매크로를 찾는다. 콜
 매크로 자체가 대상 타입을 알려주므로(`pfmDbio*`=dbio, `pfmDlCall`=biz,

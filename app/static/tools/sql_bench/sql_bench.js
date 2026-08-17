@@ -17,8 +17,8 @@
                 <span>사용 전 주의사항</span>
             </div>
             <ul class="notice-list">
-                <li>이 도구는 DB에 연결하지 않고 순수 텍스트 파싱을 수행하므로, <strong>물리 테이블과 뷰(View)를 구별하지 않습니다.</strong></li>
-                <li>스키마 프리픽스(<code>SCOTT.EMP</code>) 및 DB 링크(<code>EMP@DB1</code>)가 제거된 순수 테이블명만 추출됩니다. 크로스 스키마/DB 참조 여부는 SQL 원본에서 확인해 주세요.</li>
+                <li>DB 링크가 제거된 순수 테이블명만 중복 없이 추출됩니다. </li>
+                <li>복수의 sql을 담을시 ;로 구분해주세요. </li>
             </ul>
         </div>
 

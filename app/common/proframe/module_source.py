@@ -136,7 +136,7 @@ def write_group_map(group_map: dict[tuple[str, str], str], path: str) -> None:
         "#",
         "# 한 줄에 `ID\tGROUP\tMODULE_TYPE`. `#` 뒤는 주석. 빈 줄 무시.",
         "# 사람이 직접 편집하지 말 것 — scripts/build_module_group_map.py로 재생성.",
-        "# 로더: app/common/module_src.py::load_group_map",
+        "# 로더: app/common/proframe/module_source.py::load_group_map",
         "# 경로를 바꾸려면 NOGADA_MODULE_GROUP_MAP_PATH 환경변수 사용.",
         "",
     ]

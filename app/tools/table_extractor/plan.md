@@ -1,6 +1,8 @@
 # Table Extractor — 백엔드 (원격 소스 → 참조 테이블 추출)
 
 > **기준:** DBIO 포맷·경로는 실물 픽스처 `remote_ap_server/files/…/release/dbio/xml/`(평면 `<ID>.xml`)를 정답으로 삼는다. *(2026-08-10 실물 경로 정정 — 이전 `publish_ecams/resource/<PROG>/<SQLTYPE>/…`는 오경로였음. 아래 날짜 로그의 옛 경로 서술보다 맨 끝 2026-08-10 섹션이 최신.)*
+>
+> **모듈 경로 안내:** 이 문서의 `app/common/*.py`(예: `source.py`, `dbio.py`, `sql.py`, `proframe.py`) 언급은 전부 리펙터링(`450b9dd 1차 리펙터링 : 공통기능 재분류`) **이전** 플랫 구조 기준이다. 현재는 `app/common/io/`(`source.py`→`sftp.py`, `db.py`), `app/common/parse/`(`sql.py`, `text_sanitize.py`, `c_source.py`), `app/common/proframe/`(`proframe.py`→`types.py`, `dbio.py`, `module_source.py`, `db_schema.py`)로 재분류돼 있다. 현재 파일 분류는 `CLAUDE.md`의 "공용 모듈 `app/common/`" 섹션 참고. 이 문서의 `app/tools/table_extractor/mapper.py` 언급도 이후 **`dbio_sql.py`로 리네임**됐다(같은 파이프라인 층인 `refs.py`와 이름 축을 맞추기 위함 — "무엇처럼 생겼는지"가 아니라 "무엇을 다루는지"로 통일).
 
 ## Context
 프론트(드롭박스+입력+버튼, 좌 테이블목록/우 SQL 패널)는 완성됐고 `추출하기` 버튼은 아직 무동작이다. 백엔드는 빈 스텁(`router.py`는 prefix만, `service.py`는 비어 있음)이다. 이번 작업은 **ID → 원격 소스 파일 → 참조 테이블** 파이프라인을 구현한다.

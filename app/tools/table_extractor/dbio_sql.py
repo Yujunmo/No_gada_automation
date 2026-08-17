@@ -31,7 +31,7 @@ def extract_sql(xml_text: str) -> list[str]:
     try:
         root = ET.fromstring(xml_text)
     except ET.ParseError as e:
-        logger.warning("mapper: XML 파싱 실패, 정규식 폴백 사용: %s", e)
+        logger.warning("dbio_sql: XML 파싱 실패, 정규식 폴백 사용: %s", e)
         return [_unescape(m.group(1)) for m in _SQL_STRING_BLOCK_RE.finditer(xml_text)]
 
     return [

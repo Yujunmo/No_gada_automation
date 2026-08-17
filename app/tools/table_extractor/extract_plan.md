@@ -2,6 +2,8 @@
 
 **상태: 구현 완료 + 후속 확장 반영** (2026-08-16 기준, `pytest` 154개 그린). 아래 "설계"는 실제 구현된 최종 형태를 기록한다. 남은 항목은 맨 아래 "미해결 / 후속" 참고.
 
+> **모듈 경로 안내:** 이 문서의 `app/common/*.py`(예: `source.py`, `dbio.py`, `sql.py`, `csource.py`, `module_src.py`, `proframe.py`) 언급은 전부 리펙터링(`450b9dd 1차 리펙터링 : 공통기능 재분류`) **이전** 플랫 구조 기준이다. 현재는 `app/common/io/`(`sftp.py`, `db.py`), `app/common/parse/`(`sql.py`, `c_source.py`, `text_sanitize.py`), `app/common/proframe/`(`types.py`, `dbio.py`, `module_source.py`, `db_schema.py`)로 재분류돼 있다(예: `module_src.py`→`proframe/module_source.py`). 현재 파일 분류는 `CLAUDE.md`의 "공용 모듈 `app/common/`" 섹션 참고. 이 문서의 `app/tools/table_extractor/mapper.py` 언급도 이후 **`dbio_sql.py`로 리네임**됐다(`refs.py`와 이름 축을 맞추기 위함).
+
 **2026-08-13 이후 추가된 것**(이 문서 최초 작성 이후):
 - **재귀 참조 제외 목록**(설정 파일 기반) — 섹션 8.
 - **프론트엔드 batch 표시** — 섹션 9. (섹션 6 시절 "프론트엔드 미반영" 후속 항목 해소)
