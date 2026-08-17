@@ -7,7 +7,7 @@
             <div class="badge">테이블 추출 및 이관 도구</div>
             <h1>Table Extractor</h1>
             <p>서비스 ID 또는 DBIO ID를 입력하면 참조하는 모든 테이블을 추출합니다.</p>
-            <p>현재 프로시저, 함수 내부의 테이블은 추출 기능은 지원하지 않습니다. </p>
+            <p>현재 프로시저 내부의 테이블의 추출 기능은 지원하지 않습니다. </p>
         </div>
 
         <div class="extractor-controls">
