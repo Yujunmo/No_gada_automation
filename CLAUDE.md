@@ -78,7 +78,7 @@ pytest -k dual
 
 **`io/`** — 순수 I/O 어댑터 (프로토콜 교체 지점, 테스트에서 fake로 대체):
 - `io/sftp.py`의 `SourceReader`(Protocol) / `SftpSourceReader` / `SourceNotFound`·`SourceError` / `default_reader()`: 원격 소스 I/O 인프라(경로→내용 문자열). 회사 서버가 SFTP라 paramiko 기반. `default_reader()`는 env(`NOGADA_SFTP_HOST/_PORT/_USER/_PASS/_BASE`, 기본값 `remote_ap_server` Docker SFTP 127.0.0.1:2222)에서 `SftpSourceReader`를 조립하는 팩토리 — 회사 SFTP 서버는 하나뿐이라 여러 툴이 공유. 라우터에 `Depends(default_reader)`로 주입하면 테스트에서 `app.dependency_overrides`로 인메모리 fake reader 교체 가능.
-- `io/db.py`의 `DbClient`(Protocol) / `MySqlDbClient` / `DbError`·`QueryError` / `default_db()`: 원격 DB I/O 인프라(SQL→결과 행 `list[dict]`). `io/sftp.py`와 쌍둥이 구조 — "SQL을 주면 행을 돌려준다" 한 가지 동작만. **실제 대상은 회사 Oracle이나 용도가 단순 조회라 방언 무관을 전제**해 방언 변환 없이 순수 I/O + 테스트 주입용 경계일 뿐이다(반입 시 `MySqlDbClient`를 같은 인터페이스의 Oracle 구현으로 교체 + 접속정보만 변경). `default_db()`는 env(`NOGADA_DB_HOST/_PORT/_USER/_PASS/_NAME`, 기본값 `remote_db_server` Docker MySQL 127.0.0.1:3306/nogada testuser)에서 조립하는 팩토리. `query`마다 접속/해제하는 상태 없는 모델, `DictCursor`로 행 반환, 읽기 전용(커밋 안 함). 접속 실패는 `DbError`, SQL 실행 실패는 `QueryError`로 구분. 라우터에 `Depends(default_db)`로 주입 → 테스트는 인메모리 fake client로 교체. 소비처: `db_schema.fetch_pk_columns`(그 위에서 `table_extractor`의 `/pks`·`/migrate-sql`가 사용).
+- `io/db.py`의 `DbClient`(Protocol) / `SqlAlchemyDbClient` / `DbError`·`QueryError` / `default_db()`: 원격 DB I/O 인프라(SQL→결과 행 `list[dict]`). `io/sftp.py`와 쌍둥이 구조 — "SQL을 주면 행을 돌려준다" 한 가지 동작만. **SQLAlchemy `Engine`(Core만 사용, ORM 아님) 기반이라 DB 종류가 바뀌면 `NOGADA_DB_DIALECT`(URL scheme, 기본 `mysql+pymysql`) env만 바꾸면 되고 호출부 SQL은 그대로 유지**된다 — MySQL `%s`/Oracle `:name` 같은 방언별 paramstyle 차이를 SQLAlchemy가 흡수하므로, 호출부는 항상 named bind(`:col`)로 SQL을 쓴다(반입 시 `oracledb` 설치 + `NOGADA_DB_DIALECT=oracle+oracledb`로 전환, 접속정보만 변경). `params`가 dict이고 값이 list/tuple이면 `bindparam(expanding=True)`로 `IN` 절을 자동 확장해 호출부가 placeholder 개수를 직접 join할 필요가 없다. `default_db()`는 env(`NOGADA_DB_HOST/_PORT/_USER/_PASS/_NAME/_DIALECT`, 기본값 `remote_db_server` Docker MySQL 127.0.0.1:3306/nogada testuser)에서 조립하는 팩토리 — URL 조립은 `_build_url_from_env()`로 분리해 드라이버가 없는 dialect도 전환 로직만 테스트 가능. `query`마다 접속/해제하는 상태 없는 모델(Engine 자체와 connection pool은 재사용), 결과는 dict 행 리스트, 읽기 전용(커밋 안 함). 접속 실패는 `DbError`, SQL 실행 실패는 `QueryError`로 구분(연결 단계 vs 실행 단계로 판별). 라우터에 `Depends(default_db)`로 주입 → 테스트는 인메모리 fake client로 교체. 소비처: `db_schema.fetch_pk_columns`(그 위에서 `table_extractor`의 `/pks`·`/migrate-sql`가 사용).
 
 **`proframe/`** — ProFrame 도메인 지식 (`io/` 위에 얹힘, `__init__.py`가 `types.py`에서 재수출해 `from app.common.proframe import Module_Type` 형태 지원):
 - `proframe/types.py`의 `Module_Type` / `ResourceGroup`(`Literal` 타입) / `PROFRAME_ROOT`: ProFrame ID 분류 체계(`dbio/service/batch/biz`, 업무그룹 `PCSP/PCSH/NCOM/NCSP/PCOM/PPFR/RLGR`). module_type 4종 전체에 걸친 값이라 공용에 둠 — `table_extractor`가 먼저 쓰지만 다른 툴(예: Migration Builder)도 소비처가 될 예정.
@@ -119,7 +119,7 @@ app/
   main.py                     # FastAPI 앱 조립 + 로깅 설정
   common/                     # 툴 공용 (3개 서브패키지로 층 분리)
     io/sftp.py                #   SourceReader/SftpSourceReader/default_reader (원격 SFTP I/O)
-    io/db.py                  #   DbClient/MySqlDbClient/default_db (원격 DB 조회 I/O)
+    io/db.py                  #   DbClient/SqlAlchemyDbClient/default_db (원격 DB 조회 I/O, SQLAlchemy Engine)
     parse/text_sanitize.py    #   sanitize_text (유니코드 정제, 순수)
     parse/sql.py              #   extract_tables/strip_db_links (Oracle SQL 파싱, 순수)
     parse/c_source.py         #   strip_comments (C 소스 주석 제거, 순수)
@@ -137,12 +137,12 @@ app/
 tests/
   common/test_text_sanitize.py  # sanitize_text 단위 테스트
   common/test_sql.py          # extract_tables / strip_db_links 단위 테스트
-  common/test_db.py           # db.py 단위 테스트 (default_db 팩토리 + fake client Protocol)
-  common/test_db_schema.py    # fetch_pk_columns 단위 테스트 (fake db 주입)
+  common/test_db.py           # db.py 단위 테스트 (default_db 팩토리 + dialect 전환 + fake client Protocol)
+  common/test_schema.py       # fetch_pk_columns 단위 테스트 (fake db 주입)
   tools/test_sql_bench.py     # SQL Bench 회귀 케이스
   tools/test_table_extractor.py  # Table Extractor (dbio/mapper/라우터/pks/migrate-sql, fake reader·db 주입)
   tools/test_migrate.py       # 이관 SQL 생성 순수 함수(build_migration_sql: WHERE·제외·그룹핑)
 remote_ap_server/                # 개발용 로컬 SFTP(atmoz/sftp) + 실물 DBIO 픽스처
 remote_db_server/             # 개발용 로컬 MySQL(mysql:8.0) + all_tables 등 조회용 데이터(init/*.sql)
-pyproject.toml                # name=no-gada, deps: fastapi/uvicorn/sqlglot/paramiko/PyMySQL
+pyproject.toml                # name=no-gada, deps: fastapi/uvicorn/sqlglot/paramiko/SQLAlchemy/PyMySQL
 ```
