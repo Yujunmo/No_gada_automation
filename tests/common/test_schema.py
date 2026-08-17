@@ -19,8 +19,8 @@ class FakeDb:
 
     def query(self, sql: str, params: Params = None) -> list[Row]:
         self.calls.append((sql, params))
-        # IN 절 매칭 흉내: params(대문자 테이블명)에 포함된 행만 반환
-        wanted = set(params or [])
+        # IN 절 매칭 흉내: params["tables"](대문자 테이블명 리스트)에 포함된 행만 반환
+        wanted = set((params or {}).get("tables", []))
         return [r for r in self._rows if r["table_id"] in wanted]
 
 
@@ -58,7 +58,7 @@ def test_normalizes_case_and_whitespace_and_dedups():
     # 쿼리 1회, 파라미터는 정규화된 유니크 목록
     assert len(db.calls) == 1
     _, params = db.calls[0]
-    assert list(params) == ["PFO_STCK_MA", "PFO_FUND_BS"]
+    assert params["tables"] == ["PFO_STCK_MA", "PFO_FUND_BS"]
 
 
 def test_empty_input_does_not_query():
@@ -68,9 +68,9 @@ def test_empty_input_does_not_query():
     assert db.calls == []  # 빈 입력은 쿼리하지 않음
 
 
-def test_single_query_uses_in_placeholders():
+def test_single_query_uses_named_in_bind():
     db = FakeDb(ROWS)
     fetch_pk_columns(["PFO_STCK_MA", "PFO_FUND_BS"], db)
-    sql, _ = db.calls[0]
-    assert sql.count("%s") == 2
-    assert "IN (" in sql
+    sql, params = db.calls[0]
+    assert "IN :tables" in sql
+    assert params["tables"] == ["PFO_STCK_MA", "PFO_FUND_BS"]

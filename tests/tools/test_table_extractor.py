@@ -395,7 +395,7 @@ class FakeDb:
         self._rows = rows
 
     def query(self, sql: str, params: Params = None) -> list[Row]:
-        wanted = set(params or [])
+        wanted = set((params or {}).get("tables", []))
         return [r for r in self._rows if r["table_id"] in wanted]
 
 

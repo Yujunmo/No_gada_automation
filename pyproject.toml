@@ -8,7 +8,8 @@ dependencies = [
     "uvicorn[standard]>=0.29",
     "sqlglot>=23.0",
     "paramiko>=3.0",  # 원격 소스(SFTP) 접속 — app/common/source.py
-    "PyMySQL>=1.1",   # 테스트 DB(MySQL) 조회 — app/common/db.py (반입 시 Oracle 드라이버로 교체)
+    "SQLAlchemy>=2.0",  # DB 접속 추상화(Engine/dialect) — app/common/io/db.py
+    "PyMySQL>=1.1",   # 테스트 DB(MySQL) 드라이버 — SQLAlchemy dialect mysql+pymysql (반입 시 oracledb로 교체)
 ]
 
 [project.optional-dependencies]

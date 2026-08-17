@@ -1,13 +1,15 @@
 """원격 DB 조회 추상화 (툴 공용 I/O 인프라).
 
 "SQL을 주면 결과 행(list[dict])을 돌려준다"는 한 가지 동작만 제공한다.
-`DbClient` 인터페이스 뒤에 `MySqlDbClient`(실제 접속) 구현을 숨긴다. 개발/검증은
+`DbClient` 인터페이스 뒤에 SQLAlchemy `Engine` 기반 `SqlAlchemyDbClient`를 숨긴다. 개발/검증은
 로컬 Docker MySQL(`remote_db_server/`, 127.0.0.1:3306)로, 단위 테스트는 인메모리 가짜 client로
 이 인터페이스를 만족시킨다. 특정 도구 지식이 없는 범용 인프라라 `app/common/`에 둔다(같은 범주: source.py).
 
-실제 반입 대상은 회사 Oracle이지만 용도가 **단순 조회**라 방언 차이가 없다는 전제다. 따라서 이 모듈은
-방언 변환을 하지 않고 순수 I/O + 테스트 주입용 경계일 뿐이다. 반입 후에는 `MySqlDbClient`를
-같은 `DbClient` 인터페이스를 만족하는 Oracle 구현(예: oracledb 기반)으로 교체하고 접속 정보만 바꾸면 된다.
+실제 반입 대상은 회사 Oracle이다. SQLAlchemy Engine을 쓰는 이유는 방언(dialect)별 paramstyle
+차이(MySQL `%s` vs Oracle `:name`)를 흡수하기 위함 — 호출부(`db_schema.py` 등)는 항상 named bind
+(`:col`)로 SQL을 쓰고, `NOGADA_DB_DIALECT` env(URL scheme)만 바꾸면 실제 드라이버가 교체된다.
+비즈니스 로직 쪽 SQL 문자열은 그대로 둔 채 설정만으로 DB를 전환하는 것이 목표라, ORM은 쓰지 않고
+SQLAlchemy Core(`text()`)만 사용한다.
 """
 from __future__ import annotations
 
@@ -15,8 +17,9 @@ import logging
 import os
 from typing import Any, Optional, Protocol, Sequence, Union, runtime_checkable
 
-import pymysql
-import pymysql.cursors
+from sqlalchemy import bindparam, create_engine, text
+from sqlalchemy.engine import URL
+from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger("no_gada.db")
 
@@ -41,86 +44,82 @@ class DbClient(Protocol):
     def query(self, sql: str, params: Params = None) -> list[Row]: ...
 
 
-class MySqlDbClient:
-    """MySQL 서버를 조회 대상으로 쓰는 client.
+class SqlAlchemyDbClient:
+    """SQLAlchemy `Engine`으로 여러 DB 방언에 걸쳐 동작하는 client.
 
-    접속 정보는 생성 시 주입한다(호출부가 환경변수에서 읽어 넘김 → 코드/깃에 비밀 없음).
-    `query`마다 접속/해제하는 단순 모델(상태 없는 세션) — source.py의 SftpSourceReader와 동일한 방침.
-    결과는 `DictCursor`로 컬럼명→값 dict 행 리스트로 돌려준다.
+    `query`마다 접속/해제하는 단순 모델(상태 없는 세션)은 유지하되, Engine 자체(및 그 안의
+    connection pool)는 재사용한다 — source.py의 SftpSourceReader와 동일한 "요청마다 접속" 방침이며,
+    Engine 재사용은 SQLAlchemy의 기본 동작일 뿐 별도 세션 상태를 두는 것은 아니다.
 
-    읽기 전용 용도라 커밋하지 않는다(SELECT/딕셔너리 조회 전용).
+    `params`가 dict이고 값이 list/tuple인 항목은 `IN` 절 확장(`bindparam(expanding=True)`)으로
+    자동 처리한다 — 호출부는 `"... IN :tables"` + `{"tables": [...]}`만 넘기면 되고, `%s` placeholder를
+    개수만큼 직접 join할 필요가 없다.
+
+    결과는 컬럼명→값 dict 행 리스트로 돌려준다. 읽기 전용 용도라 커밋하지 않는다.
     """
 
-    def __init__(
-        self,
-        host: str,
-        *,
-        port: int = 3306,
-        user: str,
-        password: str | None = None,
-        database: str,
-        charset: str = "utf8mb4",
-        timeout: int = 10,
-    ) -> None:
-        self._host = host
-        self._port = port
-        self._user = user
-        self._password = password
-        self._database = database
-        self._charset = charset
-        self._timeout = timeout
+    def __init__(self, url: URL | str) -> None:
+        self._engine = create_engine(url)
 
     def query(self, sql: str, params: Params = None) -> list[Row]:
         """접속 후 SQL을 실행하고 결과 행을 list[dict]로 돌려준다."""
-        try:
-            conn = pymysql.connect(
-                host=self._host,
-                port=self._port,
-                user=self._user,
-                password=self._password,
-                database=self._database,
-                charset=self._charset,
-                connect_timeout=self._timeout,
-                read_timeout=self._timeout,
-                cursorclass=pymysql.cursors.DictCursor,
-            )
-        except pymysql.err.OperationalError as e:
-            # 접속/인증/네트워크 계열 → DbError
-            raise DbError(f"DB 접속 실패: {self._user}@{self._host}:{self._port}/{self._database} ({e})") from e
+        stmt = text(sql)
+        if isinstance(params, dict):
+            expanding_names = [name for name, value in params.items() if isinstance(value, (list, tuple))]
+            if expanding_names:
+                stmt = stmt.bindparams(*(bindparam(name, expanding=True) for name in expanding_names))
 
         try:
-            with conn.cursor() as cur:
-                try:
-                    cur.execute(sql, params)
-                    rows = cur.fetchall()
-                except pymysql.err.MySQLError as e:
-                    # 문법 오류·없는 테이블 등 실행 실패 → QueryError
-                    raise QueryError(f"SQL 실행 실패: {e}") from e
+            conn = self._engine.connect()
+        except SQLAlchemyError as e:
+            url = self._engine.url.render_as_string(hide_password=True)
+            raise DbError(f"DB 접속 실패: {url} ({e})") from e
+
+        try:
+            try:
+                result = conn.execute(stmt, params or {})
+                rows = [dict(row) for row in result.mappings()]
+            except SQLAlchemyError as e:
+                raise QueryError(f"SQL 실행 실패: {e}") from e
         finally:
             conn.close()
 
-        result = list(rows)
-        logger.debug("MySqlDbClient query: %d rows | %.120s", len(result), sql.replace("\n", " "))
-        return result
+        logger.debug("SqlAlchemyDbClient query: %d rows | %.120s", len(rows), sql.replace("\n", " "))
+        return rows
 
 
-def default_db() -> DbClient:
-    """env(NOGADA_DB_*)에서 MySqlDbClient 생성. 기본값은 로컬 Docker MySQL 테스트 서버.
+def _build_url_from_env() -> URL:
+    """env(NOGADA_DB_*)에서 SQLAlchemy 접속 URL을 조립한다(순수, Engine 생성 없음).
 
-    테스트 DB는 하나뿐이라 여러 툴이 이 팩토리를 공유한다. 라우터에 FastAPI
-    `Depends(default_db)`로 주입하면 테스트에서 `app.dependency_overrides`로 교체 가능
-    (source.py의 default_reader와 동일한 규약).
+    `create_engine()`은 URL의 dialect에 해당하는 DBAPI 모듈을 즉시 import하므로, 드라이버가
+    설치되지 않은 dialect로는 Engine을 만들 수 없다 — 그래서 URL 조립만 따로 떼어 dialect 전환
+    로직을 드라이버 설치 여부와 무관하게 테스트할 수 있게 한다.
     """
     host = os.environ.get("NOGADA_DB_HOST", "127.0.0.1")
     port = int(os.environ.get("NOGADA_DB_PORT", "3306"))
     user = os.environ.get("NOGADA_DB_USER", "testuser")
+    password = os.environ.get("NOGADA_DB_PASS", "testpass")
     database = os.environ.get("NOGADA_DB_NAME", "nogada")
-    logger.debug("default_db: MySQL client 생성 %s@%s:%d/%s", user, host, port, database)
+    dialect = os.environ.get("NOGADA_DB_DIALECT", "mysql+pymysql")
+    logger.debug("_build_url_from_env: %s 조립 %s@%s:%d/%s", dialect, user, host, port, database)
 
-    return MySqlDbClient(
-        host,
+    return URL.create(
+        dialect,
+        username=user,
+        password=password,
+        host=host,
         port=port,
-        user=user,
-        password=os.environ.get("NOGADA_DB_PASS", "testpass"),
         database=database,
     )
+
+
+def default_db() -> DbClient:
+    """env(NOGADA_DB_*)에서 SqlAlchemyDbClient 생성. 기본값은 로컬 Docker MySQL 테스트 서버.
+
+    `NOGADA_DB_DIALECT`(기본 `mysql+pymysql`)가 SQLAlchemy URL scheme를 결정한다 — 회사 Oracle
+    반입 시 드라이버(예: `oracledb`) 설치 + 이 env 값을 `oracle+oracledb`로 바꾸는 것만으로 전환된다.
+    테스트 DB는 하나뿐이라 여러 툴이 이 팩토리를 공유한다. 라우터에 FastAPI
+    `Depends(default_db)`로 주입하면 테스트에서 `app.dependency_overrides`로 교체 가능
+    (source.py의 default_reader와 동일한 규약).
+    """
+    return SqlAlchemyDbClient(_build_url_from_env())

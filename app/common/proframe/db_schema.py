@@ -35,9 +35,8 @@ def fetch_pk_columns(tables: Sequence[str], db: DbClient) -> dict[str, list[str]
     if not names:
         return {}
 
-    placeholders = ", ".join(["%s"] * len(names))
-    sql = f"SELECT table_id, pk_column FROM {ALL_TABLES} WHERE table_id IN ({placeholders})"
-    rows = db.query(sql, names)
+    sql = f"SELECT table_id, pk_column FROM {ALL_TABLES} WHERE table_id IN :tables"
+    rows = db.query(sql, {"tables": names})
 
     result: dict[str, list[str]] = {name: [] for name in names}
     for row in rows:
