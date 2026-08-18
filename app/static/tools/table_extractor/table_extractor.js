@@ -510,7 +510,27 @@
         }
     }
 
-    function renderTables(tables, batches) {
+    // 경유한 DBIO/service/biz 모듈 ID 한 그룹(추출경로 섹션의 하위 블록 하나) — 비어 있으면 렌더 안 함.
+    // 그룹 제목이 곧 토글 버튼 — 기본은 접힌 상태, 클릭하면 목록이 나타난다.
+    function renderTraceGroup(label, ids) {
+        if (!ids || !ids.length) return '';
+        return `
+            <div class="te-trace-group">
+                <button type="button" class="te-trace-toggle" aria-expanded="false">
+                    <span class="te-trace-chevron">▶</span>
+                    <span class="te-trace-group-title">${label}</span>
+                    <span class="count-badge">${ids.length}개</span>
+                </button>
+                <div class="te-trace-list te-trace-list-collapsed">
+                    ${ids.map(function (id) {
+                        return '<div class="te-trace-item" title="' + escapeHtml(id) + '">' + escapeHtml(id) + '</div>';
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderTables(tables, batches, dbios, services, bizs) {
         // FEP 접두사 테이블은 메인 목록에서 빼고 아래 별도 섹션에 읽기 전용으로 표시
         var fepTables = tables.filter(function (t) { return t.indexOf('FEP') === 0; });
         allMainTables = tables.filter(function (t) { return t.indexOf('FEP') !== 0; });
@@ -539,6 +559,16 @@
             </div>
         ` : '';
 
+        // 추출경로: 경유한 DBIO/service/biz 모듈 ID — 셋 다 비어 있으면 섹션 자체를 생략한다.
+        // 그룹별로 접혀 있다가 토글을 누르면 목록이 나타난다.
+        var traceBody = renderTraceGroup('DBIO', dbios) + renderTraceGroup('Service', services) + renderTraceGroup('Biz', bizs);
+        var traceSection = traceBody ? `
+            <div class="te-trace-section">
+                <div class="te-trace-title">추출경로 <span class="te-trace-note">추출 과정에서 경유한 모듈</span></div>
+                ${traceBody}
+            </div>
+        ` : '';
+
         resultEl.innerHTML = `
             <div class="te-prefix-filters">
                 ${PREFIXES.map(function (p) {
@@ -558,6 +588,7 @@
             <div class="te-table-list" id="te-table-list"></div>
             ${fepSection}
             ${batchSection}
+            ${traceSection}
         `;
 
         var listEl = resultEl.querySelector('#te-table-list');
@@ -638,6 +669,17 @@
             App.copyToClipboard(visibleTables.join(', '), visibleTables.length + '개 테이블명이 쉼표로 구분되어 복사되었습니다.');
         });
 
+        // 추출경로: 그룹 제목을 누르면 목록이 펼쳐지고/접힌다 (기본은 접힌 상태).
+        resultEl.querySelectorAll('.te-trace-toggle').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var list = btn.parentElement.querySelector('.te-trace-list');
+                var expanded = btn.getAttribute('aria-expanded') === 'true';
+                btn.setAttribute('aria-expanded', String(!expanded));
+                btn.querySelector('.te-trace-chevron').textContent = expanded ? '▶' : '▼';
+                list.classList.toggle('te-trace-list-collapsed');
+            });
+        });
+
         renderList();                // 목록 렌더 + visibleTables 세팅 + renderKeyin(로딩 상태)
         fetchPks(allMainTables);     // 추출 직후 전체 테이블 PK 1회 조회 → 캐시 후 renderKeyin
     }
@@ -681,11 +723,14 @@
             // 아직 없는 경우) 그 목록은 보여줘야 하므로, 둘 다 비었을 때만 완전 empty 처리한다.
             var tables = data.tables || [];
             var batches = data.batches || [];
+            var dbios = data.dbios || [];
+            var services = data.services || [];
+            var bizs = data.bizs || [];
             if (tables.length === 0 && batches.length === 0) {
                 showEmpty('추출된 테이블이 없습니다.');
                 return;
             }
-            renderTables(tables, batches);
+            renderTables(tables, batches, dbios, services, bizs);
 
         } catch (e) {
             showError('서버 요청 실패', e.message);

@@ -25,6 +25,8 @@ class ExtractResponse(BaseModel):
     sql: str             # 수집한 SQL(우측 패널 표시용, ;로 연결)
     dbios: list[str]     # 해석 과정에서 도달한 DBIO ID 목록(참고용)
     batches: list[str]   # 참조만 되고 소스는 들여다보지 않은 배치 ID 목록(참고용)
+    services: list[str]  # 재귀 중 실제로 읽어들인 service 모듈 ID(진입 모듈 포함, 추출근거 표시용)
+    bizs: list[str]      # 재귀 중 실제로 읽어들인 biz 모듈 ID(진입 모듈 포함, 추출근거 표시용)
 
 
 class PkRequest(BaseModel):
@@ -107,10 +109,13 @@ def extract(
         raise HTTPException(status_code=400, detail=str(e))
 
     logger.info(
-        "extract 완료: 테이블 %d개, DBIO %d개, batch 참조 %d개",
-        len(result.tables), len(result.dbios), len(result.batches),
+        "extract 완료: 테이블 %d개, DBIO %d개, batch 참조 %d개, service %d개, biz %d개",
+        len(result.tables), len(result.dbios), len(result.batches), len(result.services), len(result.bizs),
     )
-    return ExtractResponse(tables=result.tables, sql=result.sql, dbios=result.dbios, batches=result.batches)
+    return ExtractResponse(
+        tables=result.tables, sql=result.sql, dbios=result.dbios, batches=result.batches,
+        services=result.services, bizs=result.bizs,
+    )
 
 
 @router.post("/pks", response_model=PkResponse)

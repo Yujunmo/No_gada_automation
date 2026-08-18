@@ -342,6 +342,89 @@
     white-space: nowrap;
 }
 
+/* 추출경로: 경유한 DBIO/service/biz 모듈 ID (그룹별 토글, 기본은 접힌 상태) */
+.te-trace-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.te-trace-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.te-trace-note {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+.te-trace-group {
+    margin-bottom: 8px;
+}
+
+.te-trace-group:last-child {
+    margin-bottom: 0;
+}
+
+.te-trace-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.te-trace-toggle:hover {
+    color: var(--text-main);
+}
+
+.te-trace-chevron {
+    display: inline-block;
+    width: 1em;
+    font-size: 10px;
+}
+
+.te-trace-group-title {
+    font-weight: 600;
+}
+
+.te-trace-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.te-trace-list.te-trace-list-collapsed {
+    display: none;
+}
+
+.te-trace-item {
+    padding: 8px 12px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* 이관 sql 위 공통 PK 키 입력 컴포넌트 */
 .te-keyin {
     flex-shrink: 0;

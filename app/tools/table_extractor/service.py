@@ -24,6 +24,8 @@ class ExtractResult:
     sql: str
     dbios: list[str]
     batches: list[str] = field(default_factory=list)  # 참조만 되고 소스는 들여다보지 않은 배치 ID
+    services: list[str] = field(default_factory=list)  # 재귀 중 실제로 읽어들인 service 모듈 ID(진입 모듈 포함)
+    bizs: list[str] = field(default_factory=list)       # 재귀 중 실제로 읽어들인 biz 모듈 ID(진입 모듈 포함)
 
 
 def extract(module_type: Module_Type, resource_group: Optional[ResourceGroup], file_id: str, reader: SourceReader) -> ExtractResult:
@@ -104,6 +106,15 @@ def extract_from_module(
         module_type, file_id, len(text),
     )
 
+    # 소스를 실제로 읽는 데 성공한 시점에만 자기 자신을 기록한다(dbio의 자기 self-inclusion과 동일 규칙) —
+    # 실패해서 위에서 이미 return/raise한 경우는 여기 도달하지 않는다.
+    services: set[str] = set()
+    bizs: set[str] = set()
+    if module_type == "service":
+        services.add(file_id)
+    elif module_type == "biz":
+        bizs.add(file_id)
+
     refs = scan_module_refs(text)
     logger.debug("extract_from_module: 참조 %d개 발견 file_id=%s", len(refs), file_id)
 
@@ -146,8 +157,13 @@ def extract_from_module(
             sqls.append(result.sql)
         dbios.extend(result.dbios)
         batches.update(result.batches)
+        services.update(result.services)
+        bizs.update(result.bizs)
 
-    return ExtractResult(tables=sorted(tables), sql=";\n".join(sqls), dbios=dbios, batches=sorted(batches))
+    return ExtractResult(
+        tables=sorted(tables), sql=";\n".join(sqls), dbios=dbios, batches=sorted(batches),
+        services=sorted(services), bizs=sorted(bizs),
+    )
 
 
 def migrate_sql(

@@ -159,6 +159,8 @@ def test_extract_from_module_biz_recurses_into_all_dbio_refs():
 
     assert result.tables == [f"TBL_{i}" for i in range(8)]
     assert result.dbios == GETBZOPDATE_DBIO_IDS
+    assert result.bizs == ["MPCOM_GetBzopDate"]  # 진입 모듈 자기 자신 포함(dbio의 self-inclusion과 동일 규칙)
+    assert result.services == []
 
 
 def test_extract_from_module_recursion_find_cycle_and_partial_success():
@@ -190,6 +192,8 @@ def test_extract_from_module_recursion_find_cycle_and_partial_success():
 
     assert result.tables == ["SVC_TBL"]
     assert result.dbios == ["PFO_ABC_DS001"]
+    assert result.services == ["SVC1"]  # 진입 모듈 자기 자신
+    assert result.bizs == ["BIZ_A"]     # BIZ_MISSING은 소스 조회 실패(skip)라 안 들어감
 
 
 def test_extract_from_module_group_map_skips_find_for_hit():
@@ -254,6 +258,7 @@ def test_extract_from_module_batch_ref_recorded_not_recursed():
     result = service.extract_from_module("service", "RLGR", "SRLGR96602A", reader)
 
     assert result.batches == ["BRLGRPRP0001"]
+    assert result.services == ["SRLGR96602A"]  # 진입 모듈 자기 자신(biz 참조 MZPFM_BatchLinkCall은 소스 없어 skip)
     # batch ID로는 read/listdir를 전혀 시도하지 않아야 한다(소스를 들여다보지 않음).
     assert not any("BRLGRPRP0001" in p for p in reader.read_calls)
     assert not any("BRLGRPRP0001" in p for p in reader.listdir_calls)
@@ -344,7 +349,10 @@ def test_non_dbio_extract_success_recurses_via_router():
     _use_files(_getbzopdate_files())
     resp = client.get("/table-extractor/biz/PCOM/MPCOM_GetBzopDate")
     assert resp.status_code == 200
-    assert resp.json()["dbios"] == GETBZOPDATE_DBIO_IDS
+    body = resp.json()
+    assert body["dbios"] == GETBZOPDATE_DBIO_IDS
+    assert body["bizs"] == ["MPCOM_GetBzopDate"]
+    assert body["services"] == []
 
 
 def test_non_dbio_without_resource_group_returns_400():

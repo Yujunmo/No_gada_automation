@@ -10,7 +10,7 @@
 |------|------|------|
 | **SQL Bench** | 붙여넣은 Oracle SQL → 참조 물리 테이블 추출 | 구현됨 |
 | **Table Extractor** | module_type(dbio/service/batch/biz) ID → 원격지(SFTP) 소스 재귀 탐색 → 참조 테이블 추출 → PK 조회 → 이관 DELETE/INSERT 생성 | 구현됨 |
-| SQL Formatter · Migration Builder | 문법 체크, DB 링크 부착/제거 등 | 자리만 확보(준비 중) |
+| Impact Analysis | 영향도 분석 | 자리만 확보(준비 중) |
 
 - **테이블 추출 파서**: sqlglot (`dialect="oracle"`) — DB 접속 없이 텍스트 파싱.
 - **원격 소스**: 회사 서버가 SFTP라 paramiko 기반. 로컬 검증은 Docker SFTP로 리허설.
