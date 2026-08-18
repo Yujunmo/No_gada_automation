@@ -26,6 +26,5 @@ htmlcov/
 
 logs/
 
-.env
 
 test.ipynb
