@@ -90,18 +90,25 @@ class SqlAlchemyDbClient:
 
 def _build_url_from_env() -> URL:
     """env(NOGADA_DB_*)에서 SQLAlchemy 접속 URL을 조립한다(순수, Engine 생성 없음).
-
-    `create_engine()`은 URL의 dialect에 해당하는 DBAPI 모듈을 즉시 import하므로, 드라이버가
-    설치되지 않은 dialect로는 Engine을 만들 수 없다 — 그래서 URL 조립만 따로 떼어 dialect 전환
-    로직을 드라이버 설치 여부와 무관하게 테스트할 수 있게 한다.
+    Oracle은 service_name을 쓴다. MySQL은 database를 쓴다. dialect는 env(NOGADA_DB_DIALECT)로 결정한다.,
     """
     host = os.environ.get("NOGADA_DB_HOST", "127.0.0.1")
-    port = int(os.environ.get("NOGADA_DB_PORT", "3306"))
+    port = int(os.environ.get("NOGADA_DB_PORT", "1521"))
     user = os.environ.get("NOGADA_DB_USER", "testuser")
     password = os.environ.get("NOGADA_DB_PASS", "testpass")
-    database = os.environ.get("NOGADA_DB_NAME", "nogada")
-    dialect = os.environ.get("NOGADA_DB_DIALECT", "mysql+pymysql")
+    database = os.environ.get("NOGADA_DB_NAME", "NOGADA")
+    dialect = os.environ.get("NOGADA_DB_DIALECT", "oracle+oracledb")
     logger.debug("_build_url_from_env: %s 조립 %s@%s:%d/%s", dialect, user, host, port, database)
+
+    if dialect.startswith("oracle"):
+        return URL.create(
+            dialect,
+            username=user,
+            password=password,
+            host=host,
+            port=port,
+            query={"service_name": database},
+        )
 
     return URL.create(
         dialect,
@@ -114,12 +121,5 @@ def _build_url_from_env() -> URL:
 
 
 def default_db() -> DbClient:
-    """env(NOGADA_DB_*)에서 SqlAlchemyDbClient 생성. 기본값은 로컬 Docker MySQL 테스트 서버.
-
-    `NOGADA_DB_DIALECT`(기본 `mysql+pymysql`)가 SQLAlchemy URL scheme를 결정한다 — 회사 Oracle
-    반입 시 드라이버(예: `oracledb`) 설치 + 이 env 값을 `oracle+oracledb`로 바꾸는 것만으로 전환된다.
-    테스트 DB는 하나뿐이라 여러 툴이 이 팩토리를 공유한다. 라우터에 FastAPI
-    `Depends(default_db)`로 주입하면 테스트에서 `app.dependency_overrides`로 교체 가능
-    (source.py의 default_reader와 동일한 규약).
-    """
+    
     return SqlAlchemyDbClient(_build_url_from_env())

@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
