@@ -1,0 +1,842 @@
+<title>영향도 검사</title>
+<style>
+  :root {
+    --bg: #fbfaf7;
+    --surface: #ffffff;
+    --surface-sunken: #faf9f6;
+    --sidebar-bg: #f5f4f0;
+    --sidebar-hover: #eae8e2;
+    --text: #1b1816;
+    --text-muted: #6e6761;
+    --text-faint: #b0aba4;
+    --accent: #cc6b49;
+    --accent-hover: #b85b3a;
+    --accent-wash: rgba(204, 107, 73, 0.1);
+    --accent-ring: rgba(204, 107, 73, 0.14);
+    --border: #e5e2dd;
+    --border-focus: #cc6b49;
+    --notice-bg: #faf6ee;
+    --notice-border: #eaddca;
+    --error-bg: #fdf3f2;
+    --error-border: #f6dcdb;
+    --error-text: #b32e25;
+    --biz: #3e7d5c;
+    --biz-wash: rgba(62, 125, 92, 0.09);
+    --service: #3c6a95;
+    --service-wash: rgba(60, 106, 149, 0.09);
+    --batch: #8a5fa8;
+    --batch-wash: rgba(138, 95, 168, 0.09);
+    --shadow-sm: 0 1px 3px rgba(27, 24, 22, 0.05);
+    --shadow-md: 0 4px 20px rgba(27, 24, 22, 0.05);
+    --ease: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1a1714;
+      --surface: #232019;
+      --surface-sunken: #1f1c17;
+      --sidebar-bg: #1f1c17;
+      --sidebar-hover: #2b2721;
+      --text: #f3ede4;
+      --text-muted: #a89f92;
+      --text-faint: #6e6659;
+      --accent: #e2825b;
+      --accent-hover: #ec9068;
+      --accent-wash: rgba(226, 130, 91, 0.14);
+      --accent-ring: rgba(226, 130, 91, 0.22);
+      --border: #383129;
+      --border-focus: #e2825b;
+      --notice-bg: #2a2318;
+      --notice-border: #4a3c26;
+      --error-bg: #2e1c1a;
+      --error-border: #5a2f2a;
+      --error-text: #e8837a;
+      --biz: #6bbd93;
+      --biz-wash: rgba(107, 189, 147, 0.12);
+      --service: #7fb0e0;
+      --service-wash: rgba(127, 176, 224, 0.12);
+      --batch: #c4a0dc;
+      --batch-wash: rgba(196, 160, 220, 0.12);
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+      --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #1a1714;
+    --surface: #232019;
+    --surface-sunken: #1f1c17;
+    --sidebar-bg: #1f1c17;
+    --sidebar-hover: #2b2721;
+    --text: #f3ede4;
+    --text-muted: #a89f92;
+    --text-faint: #6e6659;
+    --accent: #e2825b;
+    --accent-hover: #ec9068;
+    --accent-wash: rgba(226, 130, 91, 0.14);
+    --accent-ring: rgba(226, 130, 91, 0.22);
+    --border: #383129;
+    --border-focus: #e2825b;
+    --notice-bg: #2a2318;
+    --notice-border: #4a3c26;
+    --error-bg: #2e1c1a;
+    --error-border: #5a2f2a;
+    --error-text: #e8837a;
+    --biz: #6bbd93;
+    --biz-wash: rgba(107, 189, 147, 0.12);
+    --service: #7fb0e0;
+    --service-wash: rgba(127, 176, 224, 0.12);
+    --batch: #c4a0dc;
+    --batch-wash: rgba(196, 160, 220, 0.12);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.25);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+
+  .app-shell {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ---------- sidebar (matches existing No_Gada shell) ---------- */
+  .sidebar {
+    width: 250px;
+    flex-shrink: 0;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    padding: 24px 18px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 30px;
+    padding: 0 6px;
+  }
+
+  .brand-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .brand-name { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand-sub { font-size: 10.5px; color: var(--text-muted); font-weight: 500; margin-top: 1px; }
+
+  .nav { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: var(--ease);
+    border-left: 3px solid transparent;
+  }
+
+  .nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+  .nav-item:hover { background: var(--sidebar-hover); color: var(--text); }
+
+  .nav-item.active {
+    background: var(--notice-bg);
+    color: var(--accent);
+    border-left-color: var(--accent);
+    border-radius: 0 8px 8px 0;
+  }
+  .nav-item.active svg { color: var(--accent); }
+
+  .nav-item.disabled { opacity: 0.5; cursor: default; }
+  .nav-item.disabled:hover { background: none; color: var(--text-muted); }
+
+  .nav-badge {
+    margin-left: auto;
+    font-size: 9.5px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--border);
+    color: var(--text-muted);
+  }
+
+  .nav-new-badge {
+    margin-left: auto;
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--accent);
+    color: #fff;
+    letter-spacing: 0.02em;
+  }
+
+  .sidebar-foot {
+    font-size: 10.5px;
+    color: var(--text-faint);
+    display: flex;
+    justify-content: space-between;
+    padding: 0 6px;
+  }
+
+  /* ---------- main content ---------- */
+  .main {
+    flex: 1;
+    min-width: 0;
+    padding: 40px 44px;
+  }
+
+  .page { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+
+  .page-head h1 {
+    margin: 0 0 6px;
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  .page-head p {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--text-muted);
+    max-width: 62ch;
+  }
+
+  /* ---------- search bar ---------- */
+  .search-bar {
+    display: flex;
+    gap: 10px;
+  }
+
+  .search-bar input {
+    flex: 1;
+    height: 44px;
+    padding: 0 14px;
+    font-family: inherit;
+    font-size: 14px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: var(--ease);
+  }
+
+  .search-bar input::placeholder { color: var(--text-faint); }
+
+  .search-bar input:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px var(--accent-ring);
+  }
+
+  .search-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 44px;
+    padding: 0 20px;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--ease);
+    flex-shrink: 0;
+  }
+
+  .search-btn svg { width: 15px; height: 15px; }
+  .search-btn:hover { background: var(--accent-hover); }
+  .search-btn:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
+
+  /* ---------- results ---------- */
+  .results-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .results-count { font-size: 13.5px; }
+  .results-count strong { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .results-hint { font-size: 12px; color: var(--text-faint); }
+
+  .dbio-list {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dbio-item {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    overflow: hidden;
+    transition: var(--ease);
+  }
+
+  .dbio-item:has(.dbio-summary:hover) { border-color: var(--accent); box-shadow: var(--shadow-sm); }
+
+  .dbio-summary {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 16px;
+    background: none;
+    border: none;
+    text-align: left;
+    font-family: inherit;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .dbio-summary:focus-visible { outline: 2px solid var(--border-focus); outline-offset: -2px; border-radius: 8px; }
+
+  .chevron {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: var(--text-faint);
+    transition: transform 0.2s ease;
+  }
+
+  .dbio-item.open .chevron { transform: rotate(90deg); }
+
+  .dbio-id { font-size: 13.5px; font-weight: 500; }
+
+  .dbio-meta {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .dbio-item[data-state="loaded"] .dbio-meta,
+  .dbio-item[data-state="empty"] .dbio-meta { color: var(--text-muted); }
+
+  .count-chip {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--accent-wash);
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .count-chip.zero { background: var(--surface-sunken); color: var(--text-faint); }
+
+  .spinner {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .dbio-detail {
+    display: none;
+    padding: 4px 16px 16px 42px;
+    border-top: 1px solid var(--border);
+    animation: reveal 0.18s ease-out;
+  }
+
+  .dbio-item.open .dbio-detail { display: block; }
+
+  @keyframes reveal { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* DBIO 하나를 부르는 모듈은 타입을 섞은 트리 하나로(비즈만 더 펼침), 위에 타입별 개수만 배지로 요약 */
+  .caller-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .type-count-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .group-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+  .type-count-chip.biz { background: var(--biz-wash); color: var(--biz); }
+  .type-count-chip.biz .group-dot { background: var(--biz); }
+  .type-count-chip.service { background: var(--service-wash); color: var(--service); }
+  .type-count-chip.service .group-dot { background: var(--service); }
+  .type-count-chip.batch { background: var(--batch-wash); color: var(--batch); }
+  .type-count-chip.batch .group-dot { background: var(--batch); }
+
+  .caller-tree { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+
+  .chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    padding: 5px 7px;
+    border-radius: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* 비즈모듈만 재귀 확장 가능(서비스/배치는 항상 최상위) */
+  .caller-node { display: flex; flex-direction: column; gap: 4px; }
+
+  .caller-row { cursor: pointer; transition: var(--ease); }
+  .caller-row:hover { border-color: var(--biz); }
+  .caller-row:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 1px; }
+
+  .caller-chevron {
+    width: 9px;
+    height: 9px;
+    flex-shrink: 0;
+    color: var(--biz);
+    transition: transform 0.2s ease;
+  }
+
+  .caller-node.open > .caller-row .caller-chevron { transform: rotate(90deg); }
+
+  .caller-id { overflow: hidden; text-overflow: ellipsis; }
+
+  .caller-children {
+    display: none;
+    margin: 0 0 2px 13px;
+    padding-left: 9px;
+    border-left: 1px dashed var(--border);
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .caller-node.open > .caller-children { display: flex; }
+
+  .caller-loading, .caller-empty {
+    font-size: 10.5px;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 2px;
+  }
+
+  .caller-type-tag {
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 1px 4px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .caller-type-tag.biz { background: var(--biz-wash); color: var(--biz); }
+  .caller-type-tag.service { background: var(--service-wash); color: var(--service); }
+  .caller-type-tag.batch { background: var(--batch-wash); color: var(--batch); }
+
+  .detail-empty {
+    margin-top: 14px;
+    padding: 16px;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--text-faint);
+    background: var(--surface-sunken);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+  }
+
+  .detail-foot {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+
+  .refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 3px 6px;
+    border-radius: 5px;
+    transition: var(--ease);
+  }
+
+  .refresh-btn:hover { background: var(--sidebar-hover); color: var(--accent); }
+  .refresh-btn svg { width: 11px; height: 11px; }
+  .refresh-btn.spinning svg { animation: spin 0.7s linear infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spinner, .refresh-btn.spinning svg { animation: none; }
+    .chevron, .dbio-item, .dbio-detail { transition: none; animation: none; }
+  }
+
+  @media (max-width: 760px) {
+    .main { padding: 28px 20px; }
+    .sidebar { display: none; }
+  }
+</style>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/>
+      </svg>
+      <div>
+        <div class="brand-name">No_Gada</div>
+        <div class="brand-sub">업무 자동화 툴킷</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h7"/></svg>
+        SQL Bench
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7M4 7c0-2 1-3 3-3h10c2 0 3 1 3 3M4 7h16M8 11h8M8 15h5"/></svg>
+        Table Extractor
+      </a>
+      <a class="nav-item active" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path stroke-linecap="round" d="M8.1 7.2 15.9 7.2 M7.4 8.2 10.7 15.9 M16.6 8.2 13.3 15.9"/></svg>
+        영향도 검사
+        <span class="nav-new-badge">NEW</span>
+      </a>
+      <a class="nav-item disabled" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+        SQL Formatter
+        <span class="nav-badge">준비중</span>
+      </a>
+      <a class="nav-item disabled" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+        Migration Builder
+        <span class="nav-badge">준비중</span>
+      </a>
+    </nav>
+    <div class="sidebar-foot"><span>버전 v0.1.0</span><span>© No_Gada</span></div>
+  </aside>
+
+  <main class="main">
+    <div class="page">
+      <div class="page-head">
+        <h1>영향도 검사</h1>
+        <p>테이블명을 입력하면 그 테이블을 참조하는 DBIO를 찾습니다. DBIO를 펼치면 연결된 비즈·서비스·배치 모듈을 조회하고, 비즈모듈은 다시 펼쳐 그 비즈를 부르는 상위 모듈을 계속 따라갈 수 있습니다(서비스·배치는 항상 최상위).</p>
+      </div>
+
+      <form class="search-bar" id="search-form">
+        <input type="text" id="table-input" class="mono" value="PFO_FUND_BS" placeholder="테이블명을 입력하세요 (예: PFO_FUND_BS)">
+        <button type="submit" class="search-btn" id="search-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="6.5"/><path stroke-linecap="round" d="M20 20l-4.3-4.3"/></svg>
+          검색
+        </button>
+      </form>
+
+      <section>
+        <div class="results-head">
+          <span class="results-count"><span class="mono">PFO_FUND_BS</span>를 사용하는 DBIO <strong id="result-total">4</strong>개</span>
+          <span class="results-hint">각 항목을 펼치면 연결된 모듈을 그때 찾습니다</span>
+        </div>
+
+        <ul class="dbio-list" id="dbio-list">
+
+          <!-- 1) 아직 안 펼침 -->
+          <li class="dbio-item" data-state="unfetched">
+            <button type="button" class="dbio-summary">
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
+              <span class="dbio-id mono">PFO_FUND_INFR_HT_VF721</span>
+              <span class="dbio-meta">클릭해서 연결된 모듈 찾기</span>
+            </button>
+            <div class="dbio-detail"></div>
+          </li>
+
+          <!-- 2) 이미 펼쳐진 상태(조회 완료) -->
+          <li class="dbio-item open" data-state="loaded">
+            <button type="button" class="dbio-summary">
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
+              <span class="dbio-id mono">TRU_CMN_SRCH_SLCT_TM_EI001</span>
+              <span class="dbio-meta"><span class="count-chip">4개 모듈</span></span>
+            </button>
+            <div class="dbio-detail">
+              <div class="caller-summary">
+                <span class="type-count-chip biz"><span class="group-dot"></span>비즈 1</span>
+                <span class="type-count-chip service"><span class="group-dot"></span>서비스 2</span>
+                <span class="type-count-chip batch"><span class="group-dot"></span>배치 1</span>
+              </div>
+              <ul class="caller-tree">
+                <li class="caller-node" data-id="MZPFM_BatchLinkCall" data-state="unfetched">
+                  <div class="caller-row chip mono" role="button" tabindex="0">
+                    <svg class="caller-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
+                    <span class="caller-type-tag biz">BIZ</span>
+                    <span class="caller-id">MZPFM_BatchLinkCall</span>
+                  </div>
+                  <div class="caller-children"></div>
+                </li>
+                <li class="chip mono"><span class="caller-type-tag service">SVC</span>SPCSP53619A</li>
+                <li class="chip mono"><span class="caller-type-tag service">SVC</span>SPCSP53619C</li>
+                <li class="chip mono"><span class="caller-type-tag batch">BAT</span>SRLGR96602A</li>
+              </ul>
+              <div class="detail-foot">
+                <span>3분 전 조회됨</span>
+                <button type="button" class="refresh-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M5 9a7 7 0 0112.5-3.5M19 15a7 7 0 01-12.5 3.5"/></svg>
+                  새로고침
+                </button>
+              </div>
+            </div>
+          </li>
+
+          <!-- 3) 조회했지만 연결된 모듈 없음 -->
+          <li class="dbio-item" data-state="empty">
+            <button type="button" class="dbio-summary">
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
+              <span class="dbio-id mono">RPT_RLGR_TM_VF701</span>
+              <span class="dbio-meta"><span class="count-chip zero">0개 모듈</span></span>
+            </button>
+            <div class="dbio-detail">
+              <div class="detail-empty">이 DBIO를 호출하는 모듈을 찾지 못했습니다 (제외 목록에 있거나, 참조가 끊긴 DBIO일 수 있음)</div>
+              <div class="detail-foot">
+                <span>5분 전 조회됨</span>
+                <button type="button" class="refresh-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M5 9a7 7 0 0112.5-3.5M19 15a7 7 0 01-12.5 3.5"/></svg>
+                  새로고침
+                </button>
+              </div>
+            </div>
+          </li>
+
+          <!-- 4) 아직 안 펼침 -->
+          <li class="dbio-item" data-state="unfetched">
+            <button type="button" class="dbio-summary">
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
+              <span class="dbio-id mono">TRU_SRVC_BTN_LB_VS701</span>
+              <span class="dbio-meta">클릭해서 연결된 모듈 찾기</span>
+            </button>
+            <div class="dbio-detail"></div>
+          </li>
+
+        </ul>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+  // 클릭 시 지연 조회를 흉내내는 목업 상호작용 (실제 백엔드 연결 없음)
+  var FAKE_RESULTS = {
+    "PFO_FUND_INFR_HT_VF721": [
+      { type: "biz", label: "비즈모듈", ids: ["MZPFM_FundInfoSave"] },
+      { type: "service", label: "서비스모듈", ids: ["SPCSP41203B", "SPCSH30871A"] },
+      { type: "batch", label: "배치모듈", ids: [] }
+    ],
+    "TRU_SRVC_BTN_LB_VS701": [
+      { type: "biz", label: "비즈모듈", ids: [] },
+      { type: "service", label: "서비스모듈", ids: ["SPPFR20044A"] },
+      { type: "batch", label: "배치모듈", ids: ["BRLGR9002"] }
+    ]
+  };
+
+  // 비즈모듈만 재귀 확장 가능(서비스/배치는 늘 최상위) — "이 비즈 ID를 누가 부르는가" 목업 데이터
+  var CALLERS_OF = {
+    "MZPFM_BatchLinkCall": [
+      { type: "biz", id: "MZPFM_FundEventDispatch" },
+      { type: "service", id: "SPCSP41210A" }
+    ],
+    "MZPFM_FundEventDispatch": [
+      { type: "batch", id: "BRLGR9002" }
+    ],
+    "MZPFM_FundInfoSave": [
+      { type: "service", id: "SPCSH30871A" }
+    ]
+  };
+
+  function callerNodeHtml(id) {
+    return '<li class="caller-node" data-id="' + id + '" data-state="unfetched">' +
+      '<div class="caller-row chip mono" role="button" tabindex="0">' +
+      '<svg class="caller-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>' +
+      '<span class="caller-type-tag biz">BIZ</span>' +
+      '<span class="caller-id">' + id + '</span></div><div class="caller-children"></div></li>';
+  }
+
+  function leafHtml(type, id) {
+    var tag = type === 'service' ? 'SVC' : 'BAT';
+    return '<li class="chip mono"><span class="caller-type-tag ' + type + '">' + tag + '</span>' + id + '</li>';
+  }
+
+  // DBIO를 부르는 모듈은 타입을 섞은 트리 하나로 보여준다(비즈만 더 펼쳐짐) — 위 요약 배지는 타입별 개수만.
+  function renderGroups(container, groups) {
+    var totalCount = groups.reduce(function (sum, g) { return sum + g.ids.length; }, 0);
+    if (totalCount === 0) {
+      container.innerHTML = '<div class="detail-empty">이 DBIO를 호출하는 모듈을 찾지 못했습니다 (제외 목록에 있거나, 참조가 끊긴 DBIO일 수 있음)</div>' + footHtml();
+      return totalCount;
+    }
+    var badges = groups.map(function (g) {
+      return '<span class="type-count-chip ' + g.type + '"><span class="group-dot"></span>' + g.label.replace('모듈', '') + ' ' + g.ids.length + '</span>';
+    }).join('');
+    var items = [];
+    groups.forEach(function (g) {
+      g.ids.forEach(function (id) {
+        items.push(g.type === 'biz' ? callerNodeHtml(id) : leafHtml(g.type, id));
+      });
+    });
+    container.innerHTML = '<div class="caller-summary">' + badges + '</div>' +
+      '<ul class="caller-tree">' + items.join('') + '</ul>' + footHtml();
+    return totalCount;
+  }
+
+  // 비즈모듈 행 클릭 → 그 비즈를 부르는 상위 모듈 지연 조회(비즈면 계속 재귀 확장 가능)
+  document.body.addEventListener('click', function (e) {
+    var row = e.target.closest('.caller-row');
+    if (!row) return;
+    e.stopPropagation();
+    var node = row.closest('.caller-node');
+    var state = node.dataset.state;
+    if (state === 'loading') return;
+
+    if (state === 'loaded') {
+      node.classList.toggle('open');
+      return;
+    }
+
+    node.dataset.state = 'loading';
+    node.classList.add('open');
+    var childrenEl = node.querySelector('.caller-children');
+    childrenEl.innerHTML = '<div class="caller-loading"><span class="spinner" style="width:10px;height:10px;"></span>상위 호출 모듈 조회 중…</div>';
+
+    var callers = CALLERS_OF[node.dataset.id] || [];
+    setTimeout(function () {
+      node.dataset.state = 'loaded';
+      if (!callers.length) {
+        childrenEl.innerHTML = '<div class="caller-empty">더 이상 부르는 모듈 없음(최상위)</div>';
+        return;
+      }
+      childrenEl.innerHTML = callers.map(function (c) {
+        if (c.type === 'biz') return callerNodeHtml(c.id).replace('<li', '<div').replace('</li>', '</div>');
+        var tag = c.type === 'service' ? 'SVC' : 'BAT';
+        return '<div class="chip mono"><span class="caller-type-tag ' + c.type + '">' + tag + '</span>' + c.id + '</div>';
+      }).join('');
+    }, 550);
+  });
+
+  function footHtml() {
+    return '<div class="detail-foot"><span>방금 조회됨</span>' +
+      '<button type="button" class="refresh-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">' +
+      '<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M5 9a7 7 0 0112.5-3.5M19 15a7 7 0 01-12.5 3.5"/></svg>새로고침</button></div>';
+  }
+
+  document.querySelectorAll('.dbio-summary').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var item = btn.closest('.dbio-item');
+      var state = item.dataset.state;
+      var meta = btn.querySelector('.dbio-meta');
+      var detail = item.querySelector('.dbio-detail');
+
+      if (state === 'loading') return;
+
+      if (state === 'loaded' || state === 'empty') {
+        item.classList.toggle('open');
+        return;
+      }
+
+      // unfetched -> loading -> loaded/empty
+      item.dataset.state = 'loading';
+      item.classList.add('open');
+      meta.innerHTML = '<span class="spinner"></span>모듈 조회 중…';
+      detail.innerHTML = '';
+
+      var key = item.querySelector('.dbio-id').textContent;
+      var data = FAKE_RESULTS[key] || [];
+
+      setTimeout(function () {
+        var count = renderGroups(detail, data);
+        item.dataset.state = count === 0 ? 'empty' : 'loaded';
+        meta.innerHTML = count === 0
+          ? '<span class="count-chip zero">0개 모듈</span>'
+          : '<span class="count-chip">' + count + '개 모듈</span>';
+      }, 650);
+    });
+  });
+
+  document.body.addEventListener('click', function (e) {
+    var btn = e.target.closest('.refresh-btn');
+    if (!btn) return;
+    e.stopPropagation();
+    var item = btn.closest('.dbio-item');
+    var detail = item.querySelector('.dbio-detail');
+    var meta = item.querySelector('.dbio-summary').querySelector('.dbio-meta');
+    var key = item.querySelector('.dbio-id').textContent;
+    var data = FAKE_RESULTS[key] || [
+      { type: "biz", label: "비즈모듈", ids: ["MZPFM_BatchLinkCall"] },
+      { type: "service", label: "서비스모듈", ids: ["SPCSP53619A", "SPCSP53619C"] },
+      { type: "batch", label: "배치모듈", ids: ["SRLGR96602A"] }
+    ];
+    btn.classList.add('spinning');
+    setTimeout(function () {
+      var count = renderGroups(detail, data);
+      item.dataset.state = count === 0 ? 'empty' : 'loaded';
+      meta.innerHTML = count === 0
+        ? '<span class="count-chip zero">0개 모듈</span>'
+        : '<span class="count-chip">' + count + '개 모듈</span>';
+    }, 500);
+  });
+
+  document.getElementById('search-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var list = document.getElementById('dbio-list');
+    list.style.opacity = '0.4';
+    setTimeout(function () { list.style.opacity = '1'; }, 350);
+  });
+</script>

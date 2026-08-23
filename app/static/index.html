@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/tools/sql_bench/sql_bench.css">
     <link rel="stylesheet" href="/tools/table_extractor/table_extractor.css">
+    <link rel="stylesheet" href="/tools/impact_analysis/impact_analysis.css">
 </head>
 <body>
     <div class="app-layout">
@@ -45,14 +46,11 @@
                     <span>Table Extractor</span>
                 </a>
 
-                <a href="#" class="nav-item disabled" onclick="return false;" title="Impact Analysis (준비중)">
+                <a href="#" class="nav-item" data-page="impact-analysis" title="Impact Analysis">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                     </svg>
-                    <div class="nav-text-group">
-                        <span>Impact Analysis</span>
-                        <span class="badge-soon">준비중</span>
-                    </div>
+                    <span>Impact Analysis</span>
                 </a>
             </nav>
 
@@ -65,6 +63,7 @@
         <main class="main-content">
             <div id="page-sql-bench" class="container"></div>
             <div id="page-table-extractor" class="container" style="display: none;"></div>
+            <div id="page-impact-analysis" class="container" style="display: none;"></div>
         </main>
     </div>
 
@@ -73,5 +72,6 @@
     <script src="/js/app.js"></script>
     <script src="/tools/sql_bench/sql_bench.js"></script>
     <script src="/tools/table_extractor/table_extractor.js"></script>
+    <script src="/tools/impact_analysis/impact_analysis.js"></script>
 </body>
 </html>
