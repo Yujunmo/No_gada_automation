@@ -14,6 +14,12 @@ from app.common.proframe import Module_Type, ResourceGroup
 from app.common.proframe import db_schema
 from app.common.proframe.dbio import UnknownSqlType
 from app.tools.table_extractor import migrate, service
+from app.tools.table_extractor.excludes import (
+    load_excluded_refs,
+    load_excluded_tables,
+    save_excluded_refs,
+    save_excluded_tables,
+)
 
 logger = logging.getLogger("no_gada.table_extractor")
 
@@ -27,6 +33,30 @@ class ExtractResponse(BaseModel):
     batches: list[str]   # 참조만 되고 소스는 들여다보지 않은 배치 ID 목록(참고용)
     services: list[str]  # 재귀 중 실제로 읽어들인 service 모듈 ID(진입 모듈 포함, 추출근거 표시용)
     bizs: list[str]      # 재귀 중 실제로 읽어들인 biz 모듈 ID(진입 모듈 포함, 추출근거 표시용)
+
+
+MAX_BATCH_FILE_IDS = 50  # SFTP 재귀 탐색이 ID마다 새로 도는 구조라 상한을 둔다
+
+
+class BatchExtractRequest(BaseModel):
+    resource_group: Optional[ResourceGroup] = None  # dbio에서는 생략, 그 외 타입은 필수(라우터에서 검증)
+    file_ids: list[str]                              # 여러 ID(프론트가 쉼표로 파싱한 목록, 순서 보존)
+
+
+class BatchFailedItem(BaseModel):
+    file_id: str
+    error: str
+
+
+class BatchExtractResponse(BaseModel):
+    tables: list[str]
+    sql: str
+    dbios: list[str]
+    batches: list[str]
+    services: list[str]
+    bizs: list[str]
+    succeeded: list[str]
+    failed: list[BatchFailedItem]
 
 
 class PkRequest(BaseModel):
@@ -64,6 +94,22 @@ class MigrateResponse(BaseModel):
     skipped: list[str]
     no_pk: list[str]
     groups: list[GroupOut]   # 접미사 그룹별 SQL(팝업 박스용)
+
+
+class ExcludedTablesIn(BaseModel):
+    tables: list[str]   # 설정 팝업의 전체 목록(추가/삭제 반영된 최종 상태) — 전체 교체로 저장
+
+
+class ExcludedTablesOut(BaseModel):
+    tables: list[str]   # 정렬된 대문자 예외 테이블명 목록
+
+
+class ExcludedRefsIn(BaseModel):
+    ids: list[str]   # 설정 팝업의 전체 목록(추가/삭제 반영된 최종 상태) — 전체 교체로 저장
+
+
+class ExcludedRefsOut(BaseModel):
+    ids: list[str]   # 정렬된 예외 ID 목록(대소문자 원형 보존 — 재귀 매칭이 대소문자 구분)
 
 
 # DBIO는 resource_group이 파일 경로에 쓰이지 않아 2세그먼트(생략) 경로를 허용한다.
@@ -118,6 +164,56 @@ def extract(
     )
 
 
+@router.post("/{module_type}/extract-batch", response_model=BatchExtractResponse)
+def extract_batch(
+    module_type: Module_Type,
+    req: BatchExtractRequest,
+    reader: SourceReader = Depends(default_reader),
+) -> BatchExtractResponse:
+    """module_type(+resource_group) + 여러 file_id → 병합된 결과 + 항목별 성공/실패.
+
+    개별 항목의 404/503/400급 실패는 HTTP 에러로 올리지 않고 failed 배열에 담아 200으로
+    반환한다(부분성공 허용). 요청 형태 자체가 잘못된 경우만(빈 목록/상한 초과/resource_group
+    누락) 400으로 거부한다. 경로가 "batch"라는 단어를 쓰지만 module_type == "batch"(ProFrame
+    배치 모듈)와는 무관 — extract-batch라는 라우트명으로 어휘 충돌을 피한다.
+    """
+    ids = [f.strip() for f in req.file_ids if f.strip()]
+    logger.info("extract_batch 요청 수신: module_type=%s resource_group=%s file_ids=%d개",
+                module_type, req.resource_group, len(req.file_ids))
+
+    if not ids:
+        logger.warning("extract_batch 거부: 유효한 ID 없음")
+        raise HTTPException(status_code=400, detail="file_ids is empty")
+    if len(ids) > MAX_BATCH_FILE_IDS:
+        logger.warning("extract_batch 거부: ID %d개(상한 %d개 초과)", len(ids), MAX_BATCH_FILE_IDS)
+        raise HTTPException(status_code=400, detail=f"file_ids exceeds max batch size ({MAX_BATCH_FILE_IDS})")
+    if module_type != "dbio" and req.resource_group is None:
+        logger.warning("extract_batch 거부: resource_group 누락 module_type=%s", module_type)
+        raise HTTPException(status_code=400, detail=f"resource_group required for {module_type}")
+
+    result = service.extract_batch(module_type, req.resource_group, req.file_ids, reader)
+
+    def _status_for(e: Exception) -> int:
+        if isinstance(e, (UnknownSqlType, ExtractionError)):
+            return 400
+        if isinstance(e, SourceNotFound):
+            return 404
+        if isinstance(e, SourceError):
+            return 503
+        return 500  # 방어적 폴백(service.extract_batch가 잡는 예외 종류상 도달하지 않음)
+
+    logger.info("extract_batch 완료: 성공 %d개, 실패 %d개, 테이블 %d개",
+                len(result.succeeded), len(result.failed), len(result.tables))
+    return BatchExtractResponse(
+        tables=result.tables, sql=result.sql, dbios=result.dbios, batches=result.batches,
+        services=result.services, bizs=result.bizs, succeeded=result.succeeded,
+        failed=[
+            BatchFailedItem(file_id=f.file_id, error=f"{_status_for(f.error)}: {f.error}")
+            for f in result.failed
+        ],
+    )
+
+
 @router.post("/pks", response_model=PkResponse)
 def pk_columns(req: PkRequest, db: DbClient = Depends(default_db)) -> PkResponse:
     """추출된 테이블 목록 → 테이블별 PK 컬럼(all_tables 딕셔너리 조회). 부작용 없는 조회."""
@@ -167,3 +263,31 @@ def migrate_sql(req: MigrateRequest, db: DbClient = Depends(default_db)) -> Migr
             GroupOut(key=g.key, sql=g.sql, tables=g.tables) for g in result.groups
         ],
     )
+
+
+@router.get("/excluded-tables", response_model=ExcludedTablesOut)
+def get_excluded_tables() -> ExcludedTablesOut:
+    """설정 팝업 진입 시 현재 저장된 예외 테이블 목록 조회."""
+    return ExcludedTablesOut(tables=sorted(load_excluded_tables()))
+
+
+@router.post("/excluded-tables", response_model=ExcludedTablesOut)
+def put_excluded_tables(req: ExcludedTablesIn) -> ExcludedTablesOut:
+    """설정 팝업의 저장 버튼 → 예외 테이블 목록 전체 교체 저장."""
+    saved = save_excluded_tables(req.tables)
+    logger.info("excluded-tables 저장 완료: %d개", len(saved))
+    return ExcludedTablesOut(tables=sorted(saved))
+
+
+@router.get("/excluded-refs", response_model=ExcludedRefsOut)
+def get_excluded_refs() -> ExcludedRefsOut:
+    """설정 팝업 진입 시 현재 저장된 재귀 참조 제외 ID 목록 조회."""
+    return ExcludedRefsOut(ids=sorted(load_excluded_refs()))
+
+
+@router.post("/excluded-refs", response_model=ExcludedRefsOut)
+def put_excluded_refs(req: ExcludedRefsIn) -> ExcludedRefsOut:
+    """설정 팝업의 저장 버튼 → 재귀 참조 제외 ID 목록 전체 교체 저장."""
+    saved = save_excluded_refs(req.ids)
+    logger.info("excluded-refs 저장 완료: %d개", len(saved))
+    return ExcludedRefsOut(ids=sorted(saved))

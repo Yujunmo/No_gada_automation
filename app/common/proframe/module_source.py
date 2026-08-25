@@ -112,7 +112,7 @@ def load_group_map(path: str | None = None) -> dict[tuple[str, str], str]:
         return {}
 
     group_map: dict[tuple[str, str], str] = {}
-    with open(path, encoding="utf-8") as f:
+    with open(path, encoding=os.environ.get("NOGADA_SOURCE_ENCODING", "utf-8")) as f:
         for line in f:
             line = line.split("#", 1)[0].strip()
             if not line:
@@ -131,16 +131,18 @@ def write_group_map(group_map: dict[tuple[str, str], str], path: str) -> None:
     사람이 diff를 보기 쉽도록 ID 기준으로 정렬해서 쓴다(같은 ID가 타입만 다르게
     여러 줄 나오는 경우도 붙어 보이도록 (file_id, module_type) 순).
     """
+    # 헤더 주석은 NOGADA_SOURCE_ENCODING이 cp949 등으로 바뀌어도 인코딩 가능해야 하므로
+    # em dash(—) 없이 하이픈만 쓴다(em dash는 cp949로 인코딩 불가).
     lines = [
-        "# ID → 업무그룹 매핑 (find 폴백 가속용, 없어도 동작에는 문제 없음 — 순차 탐색으로 폴백)",
+        "# ID -> 업무그룹 매핑 (find 폴백 가속용, 없어도 동작에는 문제 없음 - 순차 탐색으로 폴백)",
         "#",
         "# 한 줄에 `ID\tGROUP\tMODULE_TYPE`. `#` 뒤는 주석. 빈 줄 무시.",
-        "# 사람이 직접 편집하지 말 것 — scripts/build_module_group_map.py로 재생성.",
+        "# 사람이 직접 편집하지 말 것 - scripts/build_module_group_map.py로 재생성.",
         "# 로더: app/common/proframe/module_source.py::load_group_map",
         "# 경로를 바꾸려면 NOGADA_MODULE_GROUP_MAP_PATH 환경변수 사용.",
         "",
     ]
     for (module_type, file_id), group in sorted(group_map.items(), key=lambda kv: (kv[0][1], kv[0][0])):
         lines.append(f"{file_id}\t{group}\t{module_type}")
-    with open(path, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding=os.environ.get("NOGADA_SOURCE_ENCODING", "utf-8")) as f:
         f.write("\n".join(lines) + "\n")

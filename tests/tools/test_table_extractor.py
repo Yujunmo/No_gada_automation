@@ -306,6 +306,29 @@ def test_extract_dispatches_non_dbio_to_module_recursion():
     assert result.dbios == GETBZOPDATE_DBIO_IDS
 
 
+def test_extract_filters_excluded_tables_from_result(monkeypatch, tmp_path):
+    # excluded_tables.txt에 등록된 테이블은 최종 tables에서만 빠지고, 추출근거(dbios)는 그대로 남는다.
+    excl_file = tmp_path / "excluded_tables.txt"
+    excl_file.write_text("PFO_SPA_MA\n", encoding="utf-8")
+    monkeypatch.setenv("NOGADA_EXCLUDED_TABLES_PATH", str(excl_file))
+
+    reader = FakeReader({DS200_PATH: DS200_XML})
+    result = service.extract("dbio", None, "PFO_STCK_MA_DS200", reader)
+
+    assert "PFO_SPA_MA" not in result.tables
+    assert "PFO_STCK_MA" in result.tables
+    assert result.dbios == ["PFO_STCK_MA_DS200"]
+
+
+def test_extract_no_excluded_tables_file_keeps_all_tables(monkeypatch, tmp_path):
+    monkeypatch.setenv("NOGADA_EXCLUDED_TABLES_PATH", str(tmp_path / "absent.txt"))
+
+    reader = FakeReader({DS200_PATH: DS200_XML})
+    result = service.extract("dbio", None, "PFO_STCK_MA_DS200", reader)
+
+    assert "PFO_SPA_MA" in result.tables
+
+
 # ---- router ----
 
 def test_dbio_extract_success():
@@ -384,6 +407,131 @@ def test_whitespace_only_id_rejected():
 def test_route_is_get_without_body():
     resp = client.post("/table-extractor/dbio/PCSP/SOME_ID")
     assert resp.status_code == 405
+
+
+# ---- POST /table-extractor/{module_type}/extract-batch (여러 ID 동시 추출) ----
+
+def test_batch_extract_dbio_success_all():
+    _use_files({DS200_PATH: DS200_XML, EI901_PATH: EI901_XML})
+    resp = client.post("/table-extractor/dbio/extract-batch", json={
+        "file_ids": ["PFO_STCK_MA_DS200", "PFO_MNCM_CLCD_HT_EI901"],
+    })
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["succeeded"] == ["PFO_STCK_MA_DS200", "PFO_MNCM_CLCD_HT_EI901"]
+    assert body["failed"] == []
+    assert set(body["dbios"]) == {"PFO_STCK_MA_DS200", "PFO_MNCM_CLCD_HT_EI901"}
+    assert "PFO_STCK_MA" in body["tables"]
+    assert "PFO_MNCM_CLCD_HT" in body["tables"]
+
+
+def test_batch_extract_partial_failure_returns_200_with_failed_list():
+    _use_files({DS200_PATH: DS200_XML})
+    resp = client.post("/table-extractor/dbio/extract-batch", json={
+        "file_ids": ["PFO_STCK_MA_DS200", "PFO_MISSING_DS999"],
+    })
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["succeeded"] == ["PFO_STCK_MA_DS200"]
+    assert len(body["failed"]) == 1
+    assert body["failed"][0]["file_id"] == "PFO_MISSING_DS999"
+    assert "404" in body["failed"][0]["error"]
+    assert "PFO_STCK_MA" in body["tables"]
+
+
+def test_batch_extract_all_fail_still_returns_200():
+    resp = client.post("/table-extractor/dbio/extract-batch", json={
+        "file_ids": ["PFO_MISSING_DS999", "PFO_MISSING_DS998"],
+    })
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["succeeded"] == []
+    assert len(body["failed"]) == 2
+    assert body["tables"] == []
+
+
+def test_batch_extract_empty_list_returns_400():
+    resp = client.post("/table-extractor/dbio/extract-batch", json={"file_ids": []})
+    assert resp.status_code == 400
+
+
+def test_batch_extract_whitespace_only_ids_rejected():
+    resp = client.post("/table-extractor/dbio/extract-batch", json={"file_ids": ["  ", ""]})
+    assert resp.status_code == 400
+
+
+def test_batch_extract_exceeds_max_batch_size_returns_400():
+    resp = client.post("/table-extractor/dbio/extract-batch", json={
+        "file_ids": [f"ID_{i}" for i in range(51)],
+    })
+    assert resp.status_code == 400
+
+
+def test_batch_extract_non_dbio_missing_resource_group_returns_400():
+    resp = client.post("/table-extractor/service/extract-batch", json={
+        "file_ids": ["SOME_ID"],
+    })
+    assert resp.status_code == 400
+
+
+def test_batch_extract_duplicate_ids_deduped():
+    _use_files({DS200_PATH: DS200_XML})
+    resp = client.post("/table-extractor/dbio/extract-batch", json={
+        "file_ids": ["PFO_STCK_MA_DS200", "PFO_STCK_MA_DS200", " PFO_STCK_MA_DS200 "],
+    })
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["succeeded"] == ["PFO_STCK_MA_DS200"]
+    assert body["dbios"] == ["PFO_STCK_MA_DS200"]
+
+
+def test_batch_extract_dbios_cross_item_dedup_preserves_order():
+    # SVC_A -> (공유 DBIO, A전용 DBIO), SVC_B -> (같은 공유 DBIO, B전용 DBIO).
+    # 각 항목이 독립된 visited로 top-level 처리되므로 공유 DBIO가 두 번 나올 수 있는데,
+    # extract_batch가 최초 등장 순서를 유지하며 dedupe해야 한다.
+    svc_a_path = module_path("service", "PCSP", "SVC_A")
+    svc_b_path = module_path("service", "PCSP", "SVC_B")
+    svc_a_src = (
+        'PFM_TRYNJ(pfmDbioSelect("PFO_SHARED_DS001", &in, &out));\n'
+        'PFM_TRYNJ(pfmDbioSelect("PFO_ONLY_A_DS002", &in, &out));\n'
+    )
+    svc_b_src = (
+        'PFM_TRYNJ(pfmDbioSelect("PFO_SHARED_DS001", &in, &out));\n'
+        'PFM_TRYNJ(pfmDbioSelect("PFO_ONLY_B_DS003", &in, &out));\n'
+    )
+    files = {
+        svc_a_path: svc_a_src,
+        svc_b_path: svc_b_src,
+        f"{dbio.DBIO_RESOURCE_ROOT}/PFO_SHARED_DS001.xml": _synth_dbio_xml("SHARED_TBL"),
+        f"{dbio.DBIO_RESOURCE_ROOT}/PFO_ONLY_A_DS002.xml": _synth_dbio_xml("A_TBL"),
+        f"{dbio.DBIO_RESOURCE_ROOT}/PFO_ONLY_B_DS003.xml": _synth_dbio_xml("B_TBL"),
+    }
+    _use_files(files)
+
+    resp = client.post("/table-extractor/service/extract-batch", json={
+        "resource_group": "PCSP",
+        "file_ids": ["SVC_A", "SVC_B"],
+    })
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["succeeded"] == ["SVC_A", "SVC_B"]
+    assert body["dbios"] == ["PFO_SHARED_DS001", "PFO_ONLY_A_DS002", "PFO_ONLY_B_DS003"]
+    assert set(body["tables"]) == {"SHARED_TBL", "A_TBL", "B_TBL"}
+
+
+def test_batch_extract_excluded_tables_filter_still_applies_per_item(monkeypatch, tmp_path):
+    excl_file = tmp_path / "excluded_tables.txt"
+    excl_file.write_text("PFO_SPA_MA\n", encoding="utf-8")
+    monkeypatch.setenv("NOGADA_EXCLUDED_TABLES_PATH", str(excl_file))
+    _use_files({DS200_PATH: DS200_XML})
+
+    resp = client.post("/table-extractor/dbio/extract-batch", json={
+        "file_ids": ["PFO_STCK_MA_DS200"],
+    })
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "PFO_SPA_MA" not in body["tables"]
+    assert "PFO_STCK_MA" in body["tables"]
 
 
 # ---- POST /table-extractor/pks (PK 컬럼 조회) ----
@@ -495,3 +643,80 @@ def test_migrate_sql_db_error_returns_503():
         "tables": ["PFO_STCK_MA"], "keys": {"mncm_code": {"value": "M1"}},
     })
     assert resp.status_code == 503
+
+
+# ---- GET/POST /table-extractor/excluded-tables, /excluded-refs (설정 팝업: 조회/저장) ----
+
+@pytest.fixture(autouse=True)
+def _excluded_tables_tmp_path(monkeypatch, tmp_path):
+    # 기본 경로(config/excluded_tables.txt, config/excluded_refs.txt)를 건드리지 않도록
+    # 매 테스트를 tmp_path로 격리한다.
+    monkeypatch.setenv("NOGADA_EXCLUDED_TABLES_PATH", str(tmp_path / "excluded_tables.txt"))
+    monkeypatch.setenv("NOGADA_EXCLUDED_REFS_PATH", str(tmp_path / "excluded_refs.txt"))
+
+
+def test_get_excluded_tables_empty_when_unset():
+    resp = client.get("/table-extractor/excluded-tables")
+    assert resp.status_code == 200
+    assert resp.json()["tables"] == []
+
+
+def test_post_excluded_tables_saves_and_returns_normalized():
+    resp = client.post("/table-extractor/excluded-tables", json={"tables": ["pfo_a", "PFO_B", "pfo_a"]})
+    assert resp.status_code == 200
+    assert resp.json()["tables"] == ["PFO_A", "PFO_B"]
+
+
+def test_get_excluded_tables_reflects_previous_save():
+    client.post("/table-extractor/excluded-tables", json={"tables": ["FOO", "BAR"]})
+    resp = client.get("/table-extractor/excluded-tables")
+    assert resp.status_code == 200
+    assert resp.json()["tables"] == ["BAR", "FOO"]
+
+
+def test_post_excluded_tables_empty_list_clears_saved():
+    client.post("/table-extractor/excluded-tables", json={"tables": ["FOO"]})
+    resp = client.post("/table-extractor/excluded-tables", json={"tables": []})
+    assert resp.status_code == 200
+    assert resp.json()["tables"] == []
+    assert client.get("/table-extractor/excluded-tables").json()["tables"] == []
+
+
+def test_post_excluded_tables_missing_body_field_rejected():
+    resp = client.post("/table-extractor/excluded-tables", json={})
+    assert resp.status_code == 422
+
+
+# ---- GET/POST /table-extractor/excluded-refs (설정 팝업: 모듈 예외처리 조회/저장) ----
+
+def test_get_excluded_refs_empty_when_unset():
+    resp = client.get("/table-extractor/excluded-refs")
+    assert resp.status_code == 200
+    assert resp.json()["ids"] == []
+
+
+def test_post_excluded_refs_saves_and_preserves_case():
+    # 테이블명과 달리 ID는 대문자로 정규화하지 않는다(재귀 매칭이 대소문자 구분).
+    resp = client.post("/table-extractor/excluded-refs", json={"ids": ["MZCOM_DeadBiz", "PFO_LEGACY_MA_DS999"]})
+    assert resp.status_code == 200
+    assert resp.json()["ids"] == ["MZCOM_DeadBiz", "PFO_LEGACY_MA_DS999"]
+
+
+def test_get_excluded_refs_reflects_previous_save():
+    client.post("/table-extractor/excluded-refs", json={"ids": ["FooId", "BarId"]})
+    resp = client.get("/table-extractor/excluded-refs")
+    assert resp.status_code == 200
+    assert resp.json()["ids"] == ["BarId", "FooId"]
+
+
+def test_post_excluded_refs_empty_list_clears_saved():
+    client.post("/table-extractor/excluded-refs", json={"ids": ["FooId"]})
+    resp = client.post("/table-extractor/excluded-refs", json={"ids": []})
+    assert resp.status_code == 200
+    assert resp.json()["ids"] == []
+    assert client.get("/table-extractor/excluded-refs").json()["ids"] == []
+
+
+def test_post_excluded_refs_missing_body_field_rejected():
+    resp = client.post("/table-extractor/excluded-refs", json={})
+    assert resp.status_code == 422

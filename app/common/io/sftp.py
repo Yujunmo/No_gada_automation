@@ -181,12 +181,17 @@ def default_reader() -> Iterator[SourceReader]:
 
     yield 의존성이라 요청 하나가 끝날 때까지 SFTP 세션 하나를 재사용하다가(재귀 추출이
     같은 reader로 수십~수백 번 read/listdir를 호출하므로) 응답 후 `close()`로 정리한다.
+
+    `NOGADA_SOURCE_ENCODING`(기본 `utf-8`)으로 원격 파일 바이트→문자열 디코딩 인코딩을
+    지정한다 — 회사 서버가 UTF-8이 아니면(예: EUC-KR/CP949) 이 값을 바꿔야 한다.
+    `io/ssh.py::default_command_runner`도 같은 서버·같은 인코딩을 쓰므로 이 env 하나를 공유한다.
     """
     host = os.environ.get("NOGADA_SFTP_HOST", "127.0.0.1")
     port = int(os.environ.get("NOGADA_SFTP_PORT", "2222"))
     user = os.environ.get("NOGADA_SFTP_USER", "testuser")
     base_dir = os.environ.get("NOGADA_SFTP_BASE", "src")
-    logger.debug("default_reader: SFTP reader 생성 %s@%s:%d base_dir=%s", user, host, port, base_dir)
+    encoding = os.environ.get("NOGADA_SOURCE_ENCODING", "utf-8")
+    logger.debug("default_reader: SFTP reader 생성 %s@%s:%d base_dir=%s encoding=%s", user, host, port, base_dir, encoding)
 
     reader = SftpSourceReader(
         host,
@@ -194,6 +199,7 @@ def default_reader() -> Iterator[SourceReader]:
         user=user,
         password=os.environ.get("NOGADA_SFTP_PASS", "testpass"),
         base_dir=base_dir,
+        encoding=encoding,
     )
     try:
         yield reader

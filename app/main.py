@@ -5,12 +5,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import logging
+import os
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from app.tools.impact_analysis.router import router as impact_analysis_router
 from app.tools.sql_bench.router import router as sql_bench_router
 from app.tools.table_extractor.router import router as table_extractor_router
 
@@ -29,7 +31,9 @@ _file_handler = RotatingFileHandler(
     LOG_DIR / "no_gada.log",
     maxBytes=5 * 1024 * 1024,
     backupCount=5,
-    encoding="utf-8",
+    # 로그 파일을 회사 로컬 환경(비 UTF-8 텍스트 편집기 등)에서 직접 열어볼 수 있으므로
+    # NOGADA_SOURCE_ENCODING(기본 utf-8)을 따른다 — io/sftp.py·io/ssh.py와 같은 env.
+    encoding=os.environ.get("NOGADA_SOURCE_ENCODING", "utf-8"),
 )
 _file_handler.setFormatter(_log_formatter)
 
@@ -41,5 +45,6 @@ app = FastAPI(title="No_Gada")
 
 app.include_router(sql_bench_router)
 app.include_router(table_extractor_router)
+app.include_router(impact_analysis_router)
 
 app.mount("/", StaticFiles(directory="app/static", html=True), name="static")

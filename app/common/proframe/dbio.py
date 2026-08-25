@@ -6,9 +6,11 @@ ID 끝의 2글자 코드(예: DS200의 "DS")가 SQLTYPE 디렉토리를 확정�
 """
 from __future__ import annotations
 
+import os
 import re
 
 from app.common.io.sftp import SourceReader
+from app.common.io.ssh import CommandRunner, grep_files
 from app.common.proframe.types import PROFRAME_ROOT
 
 # DBIO 리소스 위치 규칙: release/dbio/xml/<ID>.xml (평면 구조 — PROG/SQLTYPE 하위 없음).
@@ -45,4 +47,24 @@ def read_dbio_xml(file_id: str, reader: SourceReader) -> str:
     classify_sqltype(file_id)  # 접미사 검증 전용 — 반환 SQLTYPE은 경로에 사용하지 않음.
     path = f"{DBIO_RESOURCE_ROOT}/{file_id}.xml"
     return reader.read(path)
+
+
+def find_dbios_referencing(table: str, searcher: CommandRunner) -> list[str]:
+    """테이블명을 포함하는 DBIO XML을 grep해 그 DBIO ID **후보** 목록을 돌려준다.
+
+    Impact Analysis 1홉의 싼 후보 필터다 — release/dbio/xml 아래 수천 개 XML을 열지 않고
+    원격 grep으로 몇 개로 좁힌다. 놓침 0이 중요하므로 **느슨하게**(부분 문자열 허용) 잡고,
+    오탐(컬럼명·주석·부분일치)은 후속 파싱 확정 단계가 거른다 — 즉 이 함수의 결과는
+    "확정된 참조"가 아니라 "검사해볼 후보"다.
+
+    grep이 돌려준 파일 경로에서 파일명(<ID>.xml)을 떼어 ID로 환원한다(평면 구조라 basename이
+    곧 ID). 대소문자는 grep이 무시하므로(-i) 테이블명 케이스는 상관없다.
+    """
+    hits = grep_files(searcher, table.strip(), DBIO_RESOURCE_ROOT)
+    ids = {
+        os.path.basename(path)[: -len(".xml")]
+        for path in hits
+        if path.endswith(".xml")
+    }
+    return sorted(ids)
  

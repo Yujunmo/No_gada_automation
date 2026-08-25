@@ -12,7 +12,7 @@ from app.common.proframe import db_schema
 from app.common.proframe.dbio import UnknownSqlType, read_dbio_xml
 from app.common.proframe.module_source import load_group_map, read_module_source
 from app.tools.table_extractor import dbio_sql, migrate
-from app.tools.table_extractor.excludes import load_excluded_refs
+from app.tools.table_extractor.excludes import load_excluded_refs, load_excluded_tables
 from app.tools.table_extractor.refs import scan_module_refs
 
 logger = logging.getLogger("no_gada.table_extractor")
@@ -28,16 +28,105 @@ class ExtractResult:
     bizs: list[str] = field(default_factory=list)       # 재귀 중 실제로 읽어들인 biz 모듈 ID(진입 모듈 포함)
 
 
+@dataclass
+class FailedItem:
+    file_id: str
+    error: Exception   # 원본 예외를 그대로 보존 — 상태코드 매핑은 라우터의 기존 except 체인이 담당
+
+
+@dataclass
+class BatchExtractResult:
+    tables: list[str]
+    sql: str
+    dbios: list[str]
+    batches: list[str] = field(default_factory=list)
+    services: list[str] = field(default_factory=list)
+    bizs: list[str] = field(default_factory=list)
+    succeeded: list[str] = field(default_factory=list)  # 성공한 file_id(입력 순서)
+    failed: list[FailedItem] = field(default_factory=list)
+
+
 def extract(module_type: Module_Type, resource_group: Optional[ResourceGroup], file_id: str, reader: SourceReader) -> ExtractResult:
     """module_type/(resource_group)/ID → 원격 소스 → 참조 테이블 추출.
 
     dbio는 참조가 없는 리프라 extract_from_dbio로 바로 끝나고, service/batch/biz는
-    참조를 재귀적으로 따라가는 extract_from_module로 위임한다.
+    참조를 재귀적으로 따라가는 extract_from_module로 위임한다. 반환 직전에
+    excluded_tables.txt(설정 팝업에서 등록한, 이관이 항상 불필요한 테이블) 목록으로
+    최종 tables만 걸러낸다 — dbios/services/bizs 등 추출근거 트레이스는 그대로 둔다.
     """
     if module_type == "dbio":
-        return extract_from_dbio(file_id, reader)
+        result = extract_from_dbio(file_id, reader)
     else:
-        return extract_from_module(module_type, resource_group, file_id, reader)
+        result = extract_from_module(module_type, resource_group, file_id, reader)
+
+    excluded = load_excluded_tables()
+    if excluded:
+        result.tables = [t for t in result.tables if t not in excluded]
+
+    return result
+
+
+def extract_batch(
+    module_type: Module_Type,
+    resource_group: Optional[ResourceGroup],
+    file_ids: list[str],
+    reader: SourceReader,
+) -> BatchExtractResult:
+    """여러 file_id를 순차로 extract() 호출 → 성공은 UNION 병합, 실패는 개별 기록(부분성공).
+
+    각 ID는 extract()를 독립적으로(visited=None) 호출한다 — extract_from_module 재귀 내부의
+    개별 참조 실패는 이미 skip+warn되어 여기까지 올라오지 않고, 최상위 자체의 실패(소스 없음/
+    접속 실패/파싱 실패)만 이 함수가 개별로 catch한다. excluded_tables 필터는 extract() 내부에서
+    항목별로 이미 적용되므로(filter(A)∪filter(B) == filter(A∪B)) 병합 후 재필터링하지 않는다.
+
+    dbios는 항목 간에 중복될 수 있다(각 항목이 독립된 visited라 순환 차단이 항목 간에는 없음) —
+    별도 seen 집합으로 최초 등장 순서를 보존하며 dedupe한다. tables/batches/services/bizs는
+    extract_from_module이 이미 set으로 병합해 반환하므로 단순 union이면 충분하다.
+    """
+    seen_ids: set[str] = set()
+    cleaned_ids: list[str] = []
+    for raw in file_ids:
+        fid = raw.strip()
+        if not fid or fid in seen_ids:
+            continue
+        seen_ids.add(fid)
+        cleaned_ids.append(fid)
+
+    tables: set[str] = set()
+    sqls: list[str] = []
+    dbios: list[str] = []
+    dbios_seen: set[str] = set()
+    batches: set[str] = set()
+    services: set[str] = set()
+    bizs: set[str] = set()
+    succeeded: list[str] = []
+    failed: list[FailedItem] = []
+
+    for fid in cleaned_ids:
+        try:
+            result = extract(module_type, resource_group, fid, reader)
+        except (SourceNotFound, SourceError, UnknownSqlType, ExtractionError) as e:
+            logger.warning("extract_batch: 항목 실패(skip) file_id=%s: %s", fid, e)
+            failed.append(FailedItem(file_id=fid, error=e))
+            continue
+
+        succeeded.append(fid)
+        tables.update(result.tables)
+        if result.sql:
+            sqls.append(result.sql)
+        for d in result.dbios:
+            if d not in dbios_seen:
+                dbios_seen.add(d)
+                dbios.append(d)
+        batches.update(result.batches)
+        services.update(result.services)
+        bizs.update(result.bizs)
+
+    return BatchExtractResult(
+        tables=sorted(tables), sql=";\n".join(sqls), dbios=dbios,
+        batches=sorted(batches), services=sorted(services), bizs=sorted(bizs),
+        succeeded=succeeded, failed=failed,
+    )
 
 
 def extract_from_dbio(file_id: str, reader: SourceReader) -> ExtractResult:

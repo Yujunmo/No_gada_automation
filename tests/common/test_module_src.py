@@ -141,6 +141,16 @@ def test_write_then_load_group_map_roundtrip(tmp_path):
     assert load_group_map(str(path)) == group_map
 
 
+def test_write_then_load_group_map_follows_configured_encoding(monkeypatch, tmp_path):
+    # NOGADA_SOURCE_ENCODING(회사 반입 시 비UTF-8로 전환)을 write/load 양쪽 다 따라야 한다.
+    path = tmp_path / "module_group_map.txt"
+    monkeypatch.setenv("NOGADA_SOURCE_ENCODING", "cp949")
+    group_map = {("biz", "한글_ID"): "PCOM"}
+    write_group_map(group_map, str(path))
+    assert path.read_bytes().decode("cp949").count("한글_ID") == 1
+    assert load_group_map(str(path)) == group_map
+
+
 def test_load_group_map_ignores_comments_and_blank_lines(tmp_path):
     path = tmp_path / "module_group_map.txt"
     path.write_text(

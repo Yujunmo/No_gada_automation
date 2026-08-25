@@ -21,8 +21,9 @@
                 <input type="text" id="te-prog" class="te-combo-input" placeholder="업무그룹" autocomplete="off">
                 <ul id="te-prog-list" class="te-combo-list"></ul>
             </div>
-            <input type="text" id="te-id-input" placeholder="DBIO ID를 입력하세요">
+            <input type="text" id="te-id-input" placeholder="DBIO ID를 입력하세요 (여러 개는 쉼표로 구분해 입력하세요)">
             <button id="te-submit">추출하기</button>
+            <button id="te-settings-btn" class="te-icon-btn" title="설정" aria-label="설정">&#8942;</button>
         </div>
 
         <div class="extractor-workspace">
@@ -64,6 +65,24 @@
                 <div id="te-modal-body" class="te-modal-body"></div>
             </div>
         </div>
+
+        <div id="te-settings-modal" class="te-modal-overlay" style="display:none;">
+            <div class="te-modal te-settings-modal" role="dialog" aria-modal="true">
+                <div class="te-modal-head">
+                    <span class="te-modal-title">설정</span>
+                    <div class="te-modal-head-actions">
+                        <button id="te-settings-close" class="te-modal-x" title="닫기" aria-label="닫기">&times;</button>
+                    </div>
+                </div>
+                <div class="te-settings-body">
+                    <nav class="te-settings-nav" id="te-settings-nav">
+                        <button type="button" class="te-settings-nav-item active" data-panel="excluded-tables">테이블 추출 예외처리</button>
+                        <button type="button" class="te-settings-nav-item" data-panel="excluded-refs">모듈 예외처리</button>
+                    </nav>
+                    <div class="te-settings-panel" id="te-settings-panel"></div>
+                </div>
+            </div>
+        </div>
     `;
 
     var typeSel = container.querySelector('#te-id-type');
@@ -76,10 +95,10 @@
     var modalBodyEl = container.querySelector('#te-modal-body');
     var lastSql = '';   // '전체 복사'용 전체 SQL 캐시
     var PLACEHOLDER = {
-        dbio: 'DBIO ID를 입력하세요',
-        service: 'Service ID를 입력하세요',
-        batch: 'Batch ID를 입력하세요',
-        biz: 'Biz ID를 입력하세요',
+        dbio: 'DBIO ID를 입력하세요 (여러 개는 쉼표로 구분해 입력하세요)',
+        service: 'Service ID를 입력하세요 (여러 개는 쉼표로 구분해 입력하세요)',
+        batch: 'Batch ID를 입력하세요 (여러 개는 쉼표로 구분해 입력하세요)',
+        biz: 'Biz ID를 입력하세요 (여러 개는 쉼표로 구분해 입력하세요)',
     };
 
     typeSel.addEventListener('change', function () {
@@ -162,6 +181,23 @@
         });
     }
 
+    // 입력창(#te-id-input)의 원본 텍스트 → ID 목록(쉼표 구분, 공백 제거, 중복 제거, 첫 등장 순서
+    // 유지). 아직은 결과에서 첫 번째 ID만 실제로 조회하지만(여러 개 동시 조회는 다음 업데이트
+    // 예정), 입력 파싱 자체는 미리 만들어둔다.
+    var MAX_IDS = 50;
+
+    function parseIds(raw) {
+        var out = [];
+        var seen = {};
+        String(raw || '').split(/,+/).forEach(function (s) {
+            var id = s.trim();
+            if (!id || seen[id]) return;
+            seen[id] = true;
+            out.push(id);
+        });
+        return out;
+    }
+
     function showEmpty(msg) {
         resultEl.innerHTML = '<div class="te-empty">' + escapeHtml(msg) + '</div>';
     }
@@ -172,7 +208,7 @@
         pkMap = {};
         pkLoaded = false;
         keyinState = {};
-        keyinEl.innerHTML = '<div class="te-empty">테이블을 추출하면 PK 입력란이 표시됩니다.</div>';
+        keyinEl.innerHTML = '<div class="te-keyin-box"><div class="te-empty">테이블을 추출하면 PK 입력란이 표시됩니다.</div></div>';
     }
 
     function showSpinner() {
@@ -223,6 +259,21 @@
         return /date$/i.test(col);
     }
 
+    // 일반 PK 박스 내 우선 노출 순서(사내 관행상 자주 쓰는 키 먼저). 대소문자 무관 매칭.
+    var PK_PRIORITY = ['mncm_code', 'fund_code', 'cmpn_code', 'itms_code'];
+    function pkPriorityIndex(col) {
+        var idx = PK_PRIORITY.indexOf(String(col).toLowerCase());
+        return idx === -1 ? PK_PRIORITY.length : idx;
+    }
+
+    // PK_PRIORITY에 있는 컬럼을 그 순서대로 앞에 배치, 나머지는 원래 순서(첫 등장 순) 유지.
+    // Array#sort는 안정 정렬이라 우선순위가 같은(모두 미등록인) 항목끼리는 순서가 보존된다.
+    function sortByPkPriority(cols) {
+        return cols.slice().sort(function (a, b) {
+            return pkPriorityIndex(a) - pkPriorityIndex(b);
+        });
+    }
+
     // 컬럼별 키 입력 상태(모드/값)를 최초 1회 만들어 keyinState에 보존한다.
     // 필터·선택 변경으로 입력란이 다시 그려져도 여기서 복원 → 값과 단일/기간 모드가 유지됨.
     function ensureKeyinState(col) {
@@ -249,17 +300,17 @@
 
     function renderKeyin(errorMsg) {
         if (errorMsg) {
-            keyinEl.innerHTML = '<div class="te-keyin-warn">' + escapeHtml(errorMsg) + '</div>';
+            keyinEl.innerHTML = '<div class="te-keyin-box"><div class="te-keyin-warn">' + escapeHtml(errorMsg) + '</div></div>';
             return;
         }
 
         var sel = visibleTables;   // 필터된(보이는) 결과가 곧 이관 대상
         if (!sel.length) {
-            keyinEl.innerHTML = '<div class="te-empty">대상 테이블이 없습니다(필터를 확인하세요).</div>';
+            keyinEl.innerHTML = '<div class="te-keyin-box"><div class="te-empty">대상 테이블이 없습니다(필터를 확인하세요).</div></div>';
             return;
         }
         if (!pkLoaded) {
-            keyinEl.innerHTML = '<div class="te-empty">PK 정보를 불러오는 중...</div>';
+            keyinEl.innerHTML = '<div class="te-keyin-box"><div class="te-empty">PK 정보를 불러오는 중...</div></div>';
             return;
         }
 
@@ -267,21 +318,37 @@
         var union = computePkUnion(sel);
 
         if (!union.length) {
-            keyinEl.innerHTML = '<div class="te-keyin-warn">대상 ' + sel.length + '개 테이블에 PK 정보가 없습니다.'
-                + (missing.length ? ' (PK 정보 없음: ' + escapeHtml(missing.join(', ')) + ')' : '') + '</div>';
+            keyinEl.innerHTML = '<div class="te-keyin-box"><div class="te-keyin-warn">대상 ' + sel.length + '개 테이블에 PK 정보가 없습니다.'
+                + (missing.length ? ' (PK 정보 없음: ' + escapeHtml(missing.join(', ')) + ')' : '') + '</div></div>';
             return;
         }
 
+        // 일반 PK와 날짜 PK를 각각 독립 스크롤 박스로 분리 표시. 일반 PK는 PK_PRIORITY 순서 우선.
+        var normalCols = sortByPkPriority(union.filter(function (c) { return !isDateColumn(c); }));
+        var dateCols = union.filter(isDateColumn);
+
         keyinEl.innerHTML =
             '<div class="te-keyin-head">PK 키 입력 <span class="count-badge">대상 ' + sel.length + '개 · PK ' + union.length + '개</span></div>'
-            + '<div class="te-keyin-fields">'
-            + union.map(renderKeyinField).join('')
+            + '<div class="te-keyin-boxes">'
+            + renderKeyinBox('일반 PK', normalCols)
+            + renderKeyinBox('날짜 PK', dateCols)
             + '</div>'
             + (missing.length
                 ? '<div class="te-keyin-note">PK 정보 없는 테이블: ' + escapeHtml(missing.join(', ')) + '</div>'
                 : '');
 
         bindKeyinEvents();
+    }
+
+    // 일반/날짜 PK 박스 하나(제목 + 필드 그리드, 자체 스크롤) 렌더. 컬럼이 없으면 박스 자체를 생략.
+    function renderKeyinBox(title, cols) {
+        if (!cols.length) return '';
+        return '<div class="te-keyin-box">'
+            + '<div class="te-keyin-section-title">' + escapeHtml(title) + ' <span class="count-badge">' + cols.length + '개</span></div>'
+            + '<div class="te-keyin-fields">'
+            + cols.map(renderKeyinField).join('')
+            + '</div>'
+            + '</div>';
     }
 
     // 필드 하나 렌더: 일반=입력 1칸, 날짜=[단일|기간] 토글 + 모드별 입력
@@ -481,7 +548,223 @@
         if (e.target === modalEl) closeModal();
     });
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && modalEl.style.display !== 'none') closeModal();
+        if (e.key !== 'Escape') return;
+        if (modalEl.style.display !== 'none') closeModal();
+        if (settingsModalEl.style.display !== 'none') closeSettingsModal();
+    });
+
+    // --- 설정 팝업(사이드 네비 + 패널) ---
+    // 각 탭(예외 테이블/모듈)은 "서버에서 목록 조회 → 로컬 draft로 편집 → 저장 버튼으로 POST"라는
+    // 동일한 구조라 makeListSettingsPanel 팩토리 하나로 만든다. 새 탭을 추가하려면 네비 버튼 +
+    // SETTINGS_PANELS에 팩토리 호출 한 줄만 더하면 된다.
+    var settingsBtn = container.querySelector('#te-settings-btn');
+    var settingsModalEl = container.querySelector('#te-settings-modal');
+    var settingsNavEl = container.querySelector('#te-settings-nav');
+    var settingsPanelEl = container.querySelector('#te-settings-panel');
+
+    var EXCL_DELETE_ICON =
+        '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">'
+        + '<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>'
+        + '</svg>';
+
+    // key/value 목록을 조회·편집·저장하는 설정 탭 하나를 만든다.
+    // opts: { label, endpoint, requestKey, responseKey, placeholder, desc, normalize(raw)->string }
+    // committed = 서버에 마지막으로 저장된 상태, draft = 팝업이 열려있는 동안의 작업 사본
+    // (추가/삭제는 draft에만 반영, 저장 버튼을 눌러야 POST로 committed에 반영). 팝업을 열 때마다
+    // 서버에서 다시 조회해 초기화하므로 저장 없이 닫은 편집은 버려진다.
+    function makeListSettingsPanel(opts) {
+        var committed = [];
+        var draft = [];
+
+        function isDirty() {
+            if (draft.length !== committed.length) return true;
+            var c = committed.slice().sort();
+            var d = draft.slice().sort();
+            return d.some(function (v, i) { return v !== c[i]; });
+        }
+
+        function addItem(raw) {
+            var name = opts.normalize(raw);
+            if (!name) return;
+            if (draft.indexOf(name) !== -1) {
+                App.showToast('"' + name + '"은(는) 이미 목록에 있습니다.');
+                return;
+            }
+            draft.push(name);
+            renderList();
+        }
+
+        function removeItem(name) {
+            var idx = draft.indexOf(name);
+            if (idx !== -1) draft.splice(idx, 1);
+            renderList();
+        }
+
+        // 입력칸은 추가(Enter/버튼)뿐 아니라 이미 등록된(draft) 목록 실시간 필터로도 쓴다.
+        function renderList() {
+            var listEl = settingsPanelEl.querySelector('.te-excl-list');
+            if (!listEl) return;
+
+            var inputEl = settingsPanelEl.querySelector('.te-excl-input');
+            var query = inputEl ? inputEl.value.trim().toUpperCase() : '';
+            var visible = query
+                ? draft.filter(function (v) { return v.toUpperCase().indexOf(query) !== -1; })
+                : draft;
+
+            if (!visible.length) {
+                listEl.innerHTML = '<div class="te-empty" style="grid-column:1/-1;">'
+                    + (draft.length ? '일치하는 항목이 없습니다.' : '등록된 항목이 없습니다.')
+                    + '</div>';
+            } else {
+                listEl.innerHTML = visible.map(function (v) {
+                    return '<div class="te-excl-item">'
+                        + '<span class="te-excl-name" title="' + escapeHtml(v) + '">' + escapeHtml(v) + '</span>'
+                        + '<button class="copy-btn te-del-btn" title="삭제" data-name="' + escapeHtml(v) + '">' + EXCL_DELETE_ICON + '</button>'
+                        + '</div>';
+                }).join('');
+                listEl.querySelectorAll('.te-del-btn').forEach(function (btn) {
+                    btn.addEventListener('click', function (e) {
+                        removeItem(e.currentTarget.getAttribute('data-name'));
+                    });
+                });
+            }
+
+            // 미저장 변경사항 표시 + 저장 버튼 활성화 여부(필터와 무관하게 draft 전체 기준)
+            var dirty = isDirty();
+            var hintEl = settingsPanelEl.querySelector('.te-excl-dirty-hint');
+            var saveBtn = settingsPanelEl.querySelector('.te-excl-save');
+            if (hintEl) hintEl.textContent = dirty ? '저장되지 않은 변경사항이 있습니다' : '';
+            if (saveBtn) saveBtn.disabled = !dirty;
+        }
+
+        // 저장 버튼: 작업 사본을 POST로 통째 저장(전체 교체) → 성공하면 서버 응답을 새 확정 상태로 반영.
+        async function save() {
+            var saveBtn = settingsPanelEl.querySelector('.te-excl-save');
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '저장 중...'; }
+            try {
+                var body = {};
+                body[opts.requestKey] = draft;
+                var res = await fetch(opts.endpoint, {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                var data = await res.json();
+                if (!res.ok) {
+                    var detail = typeof data.detail === 'string' ? data.detail : '저장 실패';
+                    App.showToast(opts.label + ' 저장 실패: ' + detail);
+                    return;
+                }
+                committed = data[opts.responseKey] || [];
+                draft = committed.slice();
+                App.showToast(opts.label + ' ' + committed.length + '개가 저장되었습니다.');
+            } catch (e) {
+                App.showToast(opts.label + ' 저장 요청 실패: ' + e.message);
+            } finally {
+                if (saveBtn) saveBtn.textContent = '저장';
+                renderList();   // 성공/실패 무관하게 최신 draft·dirty 상태로 리스트/버튼 재계산
+            }
+        }
+
+        function renderBody() {
+            settingsPanelEl.innerHTML = `
+                <div class="te-excl-desc">${opts.desc}</div>
+                <div class="te-excl-add-row">
+                    <input type="text" class="te-excl-input" placeholder="${escapeHtml(opts.placeholder)}" autocomplete="off">
+                    <button class="btn-secondary te-excl-add">추가</button>
+                </div>
+                <div class="te-excl-list"></div>
+                <div class="te-excl-save-row">
+                    <span class="te-excl-dirty-hint"></span>
+                    <button class="btn-secondary te-excl-save">저장</button>
+                </div>
+            `;
+            renderList();
+
+            var input = settingsPanelEl.querySelector('.te-excl-input');
+            function tryAdd() {
+                addItem(input.value);
+                input.value = '';
+                input.focus();
+                renderList();   // 입력칸을 비웠으니 필터도 초기화된 전체 목록으로 다시 그린다
+            }
+            settingsPanelEl.querySelector('.te-excl-add').addEventListener('click', tryAdd);
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') tryAdd();
+            });
+            input.addEventListener('input', renderList);   // 타이핑할 때마다 등록된 목록을 실시간 필터링
+            settingsPanelEl.querySelector('.te-excl-save').addEventListener('click', save);
+        }
+
+        // 팝업 진입점: 로딩 표시 후 서버에서 최신 목록을 조회해 본문을 그린다.
+        return async function renderPanel() {
+            settingsPanelEl.innerHTML = '<div class="te-empty">' + opts.label + ' 목록을 불러오는 중...</div>';
+            try {
+                var res = await fetch(opts.endpoint);
+                var data = await res.json();
+                if (!res.ok) {
+                    var detail = typeof data.detail === 'string' ? data.detail : '조회 실패';
+                    settingsPanelEl.innerHTML = '<div class="te-keyin-warn">' + opts.label + ' 목록을 불러오지 못했습니다: ' + escapeHtml(detail) + '</div>';
+                    return;
+                }
+                committed = data[opts.responseKey] || [];
+            } catch (e) {
+                settingsPanelEl.innerHTML = '<div class="te-keyin-warn">' + opts.label + ' 목록 요청 실패: ' + escapeHtml(e.message) + '</div>';
+                return;
+            }
+            draft = committed.slice();
+            renderBody();
+        };
+    }
+
+    var SETTINGS_PANELS = {
+        'excluded-tables': makeListSettingsPanel({
+            label: '예외 테이블',
+            endpoint: '/table-extractor/excluded-tables',
+            requestKey: 'tables',
+            responseKey: 'tables',
+            placeholder: '테이블명 입력 후 Enter',
+            desc: '여기에 등록한 테이블은 추출 결과 목록에서 항상 제외됩니다.<br>추가/삭제 후 <b>저장</b>을 눌러야 반영됩니다.',
+            normalize: function (raw) { return String(raw || '').trim().toUpperCase(); },
+        }),
+        'excluded-refs': makeListSettingsPanel({
+            label: '모듈 예외처리',
+            endpoint: '/table-extractor/excluded-refs',
+            requestKey: 'ids',
+            responseKey: 'ids',
+            placeholder: 'DBIO/모듈 ID 입력 후 Enter',
+            desc: '여기에 등록한 DBIO/모듈 ID는 재귀 탐색 중 참조로 만나면 소스를 들여다보지 않고 건너뜁니다.'
+                + '<br>최상위로 직접 조회 요청한 ID에는 적용되지 않습니다.<br>추가/삭제 후 <b>저장</b>을 눌러야 반영됩니다.',
+            normalize: function (raw) { return String(raw || '').trim(); },   // ID는 대소문자 구분 매칭이라 그대로 보존
+        }),
+    };
+
+    function openSettingsPanel(key) {
+        settingsNavEl.querySelectorAll('.te-settings-nav-item').forEach(function (btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-panel') === key);
+        });
+        (SETTINGS_PANELS[key] || function () {})();
+    }
+
+    function openSettingsModal() {
+        var activeBtn = settingsNavEl.querySelector('.te-settings-nav-item.active') || settingsNavEl.querySelector('.te-settings-nav-item');
+        openSettingsPanel(activeBtn ? activeBtn.getAttribute('data-panel') : 'excluded-tables');
+        settingsModalEl.style.display = 'flex';
+    }
+
+    function closeSettingsModal() {
+        settingsModalEl.style.display = 'none';
+    }
+
+    settingsBtn.addEventListener('click', openSettingsModal);
+    settingsNavEl.querySelectorAll('.te-settings-nav-item').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            openSettingsPanel(btn.getAttribute('data-panel'));
+        });
+    });
+    container.querySelector('#te-settings-close').addEventListener('click', closeSettingsModal);
+    settingsModalEl.addEventListener('mousedown', function (e) {
+        if (e.target === settingsModalEl) closeSettingsModal();
     });
 
     // 추출된 전체 테이블의 PK를 1회 조회해 캐시(필터 변경 시엔 서버 재호출 없이 합집합만 재계산)
@@ -530,7 +813,27 @@
         `;
     }
 
-    function renderTables(tables, batches, dbios, services, bizs) {
+    // 배치 추출에서 일부 ID가 실패했을 때(사유 포함) 보여주는 표 — 이관 SQL 모달의
+    // "이관 SQL 미생성 테이블" 표(.te-nogen-table)와 동일한 {ID,사유} 2열 구조를 재사용한다.
+    function renderFailedSection(failed) {
+        return `
+            <div class="te-failed-section">
+                <div class="te-failed-title">일부 항목 조회 실패 <span class="count-badge">${failed.length}개</span></div>
+                <table class="te-nogen-table"><thead><tr><th>ID</th><th>사유</th></tr></thead><tbody>
+                    ${failed.map(function (f) {
+                        return '<tr><td>' + escapeHtml(f.file_id) + '</td><td>' + escapeHtml(f.error) + '</td></tr>';
+                    }).join('')}
+                </tbody></table>
+            </div>
+        `;
+    }
+
+    function showAllFailed(failed) {
+        resetKeyin();
+        resultEl.innerHTML = '<div class="te-empty">추출된 테이블이 없습니다.</div>' + renderFailedSection(failed);
+    }
+
+    function renderTables(tables, batches, dbios, services, bizs, failed) {
         // FEP 접두사 테이블은 메인 목록에서 빼고 아래 별도 섹션에 읽기 전용으로 표시
         var fepTables = tables.filter(function (t) { return t.indexOf('FEP') === 0; });
         allMainTables = tables.filter(function (t) { return t.indexOf('FEP') !== 0; });
@@ -558,6 +861,10 @@
                 </div>
             </div>
         ` : '';
+
+        // 배치 추출 중 일부 ID가 실패했으면(부분성공) 사유와 함께 별도로 안내한다.
+        failed = failed || [];
+        var failedSection = failed.length ? renderFailedSection(failed) : '';
 
         // 추출경로: 경유한 DBIO/service/biz 모듈 ID — 셋 다 비어 있으면 섹션 자체를 생략한다.
         // 그룹별로 접혀 있다가 토글을 누르면 목록이 나타난다.
@@ -588,6 +895,7 @@
             <div class="te-table-list" id="te-table-list"></div>
             ${fepSection}
             ${batchSection}
+            ${failedSection}
             ${traceSection}
         `;
 
@@ -686,7 +994,7 @@
 
     submitBtn.addEventListener('click', async function () {
         var idType = typeSel.value;
-        var id = idInput.value.trim();
+        var ids = parseIds(idInput.value);
 
         // 클라이언트 선검증: 서버의 422(장황한 pydantic 오류) 대신 친절한 메시지
         // DBIO는 리소스그룹을 받지 않음 → 2세그먼트 경로(생략). 그 외 타입만 리소스그룹을 검증해 3세그먼트로.
@@ -698,18 +1006,23 @@
                 return;
             }
         }
-        if (!id) {
+        if (!ids.length) {
             showError('입력값 오류', 'ID를 입력하세요.');
+            return;
+        }
+        if (ids.length > MAX_IDS) {
+            showError('입력값 오류', 'ID는 최대 ' + MAX_IDS + '개까지 입력할 수 있습니다.');
             return;
         }
 
         showSpinner();
 
         try {
-            var url = '/table-extractor/' + encodeURIComponent(idType) + '/' +
-                (prog ? encodeURIComponent(prog) + '/' : '') +
-                encodeURIComponent(id);
-            var res = await fetch(url);
+            var res = await fetch('/table-extractor/' + encodeURIComponent(idType) + '/extract-batch', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ resource_group: prog || null, file_ids: ids }),
+            });
             var data = await res.json();
 
             if (!res.ok) {
@@ -726,11 +1039,16 @@
             var dbios = data.dbios || [];
             var services = data.services || [];
             var bizs = data.bizs || [];
+            var failed = data.failed || [];
             if (tables.length === 0 && batches.length === 0) {
-                showEmpty('추출된 테이블이 없습니다.');
+                if (failed.length) {
+                    showAllFailed(failed);
+                } else {
+                    showEmpty('추출된 테이블이 없습니다.');
+                }
                 return;
             }
-            renderTables(tables, batches, dbios, services, bizs);
+            renderTables(tables, batches, dbios, services, bizs, failed);
 
         } catch (e) {
             showError('서버 요청 실패', e.message);
