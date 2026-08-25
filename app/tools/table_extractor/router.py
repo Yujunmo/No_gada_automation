@@ -114,6 +114,7 @@ class ExcludedRefsOut(BaseModel):
 
 # DBIO는 resource_group이 파일 경로에 쓰이지 않아 2세그먼트(생략) 경로를 허용한다.
 # Service/Batch/Biz는 resource_group이 필요하므로 3세그먼트 경로로 받는다(둘 다 같은 핸들러).
+# 단건 조회 라우트 — extract-batch 도입(여러 ID 동시 추출) 이후 프론트는 이 라우트를 더 이상 호출하지 않는다. API·회귀 테스트 계약 유지 목적으로 남겨둠.
 @router.get("/{module_type}/{file_id}", response_model=ExtractResponse)
 @router.get("/{module_type}/{resource_group}/{file_id}", response_model=ExtractResponse)
 def extract(
