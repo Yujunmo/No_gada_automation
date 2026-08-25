@@ -457,7 +457,7 @@
         }
 
         try {
-            var res = await fetch('/table-extractor/migrate-sql', {
+            var res = await fetch('table-extractor/migrate-sql', {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({
@@ -723,7 +723,7 @@
     var SETTINGS_PANELS = {
         'excluded-tables': makeListSettingsPanel({
             label: '예외 테이블',
-            endpoint: '/table-extractor/excluded-tables',
+            endpoint: 'table-extractor/excluded-tables',
             requestKey: 'tables',
             responseKey: 'tables',
             placeholder: '테이블명 입력 후 Enter',
@@ -732,7 +732,7 @@
         }),
         'excluded-refs': makeListSettingsPanel({
             label: '모듈 예외처리',
-            endpoint: '/table-extractor/excluded-refs',
+            endpoint: 'table-extractor/excluded-refs',
             requestKey: 'ids',
             responseKey: 'ids',
             placeholder: 'DBIO/모듈 ID 입력 후 Enter',
@@ -773,7 +773,7 @@
     // 추출된 전체 테이블의 PK를 1회 조회해 캐시(필터 변경 시엔 서버 재호출 없이 합집합만 재계산)
     async function fetchPks(tables) {
         try {
-            var res = await fetch('/table-extractor/pks', {
+            var res = await fetch('table-extractor/pks', {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({ tables: tables }),
@@ -1029,7 +1029,7 @@
         showSpinner();
 
         try {
-            var res = await fetch('/table-extractor/' + encodeURIComponent(idType) + '/extract-batch', {
+            var res = await fetch('table-extractor/' + encodeURIComponent(idType) + '/extract-batch', {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({ resource_group: prog || null, file_ids: ids }),

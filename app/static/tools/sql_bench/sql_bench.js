@@ -70,7 +70,7 @@
         var sql = sqlInput.value;
 
         try {
-            var res = await fetch('/sql-bench/extract', {
+            var res = await fetch('sql-bench/extract', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sql }),
