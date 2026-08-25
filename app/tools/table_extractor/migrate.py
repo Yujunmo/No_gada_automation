@@ -7,7 +7,9 @@
 규칙(프론트에서 백엔드로 이관한 계약):
 - 각 테이블은 **자기 PK 컬럼만**(pk_map[t]) 조건에 사용, AND 결합.
 - 값은 전부 문자열 따옴표(작은따옴표는 '' 로 이스케이프). 날짜/문자 구분은 하지 않는다(UI 관심사).
-- 조건 종류: eq → `col = 'v'`, between → `col BETWEEN 'a' AND 'b'`.
+- 조건 종류: eq → `col = 'v'`, between → `col BETWEEN 'a' AND 'b'`. **eq의 value에 쉼표(,)로
+  여러 값을 주면 `col IN ('v1', 'v2', ...)`로 조립한다**(일반 PK 텍스트박스에서 값을 쉼표로
+  구분해 입력하는 경우 — 각 조각은 trim 후 따옴표 이스케이프, 조각이 1개면 그냥 `=`).
 - **값이 빈 컬럼은 조건절에서 제외**(테이블은 계속 생성)하고 주석에 표기.
 - 한 테이블의 키가 **전부 비면** WHERE가 없어 전체 삭제가 되므로 그 테이블은 안전상 제외.
 - PK 정보가 없는(딕셔너리 미등록) 테이블도 제외. 링크 미입력이면 `@` 생략.
@@ -62,14 +64,26 @@ def _quote(v: str) -> str:
 
 
 def _condition(col: str, kc: KeyCond) -> str | None:
-    """컬럼 조건 하나를 만든다. 값이 없으면 None(조건절에서 제외)."""
+    """컬럼 조건 하나를 만든다. 값이 없으면 None(조건절에서 제외).
+
+    eq의 value에 쉼표가 있으면 여러 값으로 보고 IN(...)을 만든다(각 조각 trim, 빈 조각은
+    버림). 쉼표가 없으면 기존과 동일하게 단일 값 그대로(trim 없이) `col = 'v'`.
+    """
     if kc.op == "between":
         if kc.start and kc.end:
             return f"{col} BETWEEN '{_quote(kc.start)}' AND '{_quote(kc.end)}'"
         return None
-    if kc.value:
-        return f"{col} = '{_quote(kc.value)}'"
-    return None
+    if not kc.value:
+        return None
+    if "," in kc.value:
+        values = [v.strip() for v in kc.value.split(",") if v.strip()]
+        if not values:
+            return None
+        if len(values) == 1:
+            return f"{col} = '{_quote(values[0])}'"
+        quoted = ", ".join(f"'{_quote(v)}'" for v in values)
+        return f"{col} IN ({quoted})"
+    return f"{col} = '{_quote(kc.value)}'"
 
 
 def _at(link: str) -> str:

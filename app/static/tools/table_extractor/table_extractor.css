@@ -513,6 +513,14 @@
     margin-bottom: 8px;
 }
 
+/* 박스 제목 오른쪽 보조 안내문(일반 PK의 "여러 개는 쉼표로 구분" 등) — 제목보다 옅고 얇게 */
+.te-keyin-section-note {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
 .te-keyin-fields {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));

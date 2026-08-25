@@ -110,6 +110,54 @@ def test_single_quote_escaped():
     assert "mncm_code = 'O''BRIEN'" in r.sql
 
 
+# ---- 일반 PK 값에 쉼표로 여러 개를 주면 IN(...) ----
+
+def test_comma_separated_value_becomes_in_clause():
+    keys = {"mncm_code": KeyCond(value="M1,M2,M3")}
+    r = build_migration_sql(["TRU_MNCM_BS"], PK, keys)
+    assert "mncm_code IN ('M1', 'M2', 'M3')" in r.sql
+    assert "mncm_code = " not in r.sql
+
+
+def test_comma_separated_value_trims_whitespace_around_each_piece():
+    keys = {"mncm_code": KeyCond(value=" M1 , M2 ,M3")}
+    r = build_migration_sql(["TRU_MNCM_BS"], PK, keys)
+    assert "mncm_code IN ('M1', 'M2', 'M3')" in r.sql
+
+
+def test_comma_separated_value_drops_empty_pieces():
+    keys = {"mncm_code": KeyCond(value="M1,,M2,")}
+    r = build_migration_sql(["TRU_MNCM_BS"], PK, keys)
+    assert "mncm_code IN ('M1', 'M2')" in r.sql
+
+
+def test_single_value_with_trailing_comma_only_stays_eq():
+    # 쉼표는 있지만 조각이 하나만 남으면 IN이 아니라 = 그대로.
+    keys = {"mncm_code": KeyCond(value="M1,")}
+    r = build_migration_sql(["TRU_MNCM_BS"], PK, keys)
+    assert "mncm_code = 'M1'" in r.sql
+    assert "IN (" not in r.sql
+
+
+def test_comma_only_value_treated_as_empty_and_omitted():
+    keys = {"mncm_code": KeyCond(value=",  ,")}
+    r = build_migration_sql(["TRU_MNCM_BS"], PK, keys)
+    assert r.skipped == ["TRU_MNCM_BS"]  # 유일한 PK 키가 결국 빈 값이라 전체삭제 방지로 제외
+
+
+def test_comma_separated_value_escapes_quotes_per_piece():
+    keys = {"mncm_code": KeyCond(value="O'BRIEN,M2")}
+    r = build_migration_sql(["TRU_MNCM_BS"], PK, keys)
+    assert "mncm_code IN ('O''BRIEN', 'M2')" in r.sql
+
+
+def test_no_comma_single_value_unaffected():
+    # 쉼표 없는 단일 값은 기존과 완전히 동일(trim 없이 그대로) — 회귀 방지.
+    keys = {"mncm_code": KeyCond(value="  M1  ")}
+    r = build_migration_sql(["TRU_MNCM_BS"], PK, keys)
+    assert "mncm_code = '  M1  '" in r.sql
+
+
 # ---- 접미사 그룹핑 ----
 
 GPK = {

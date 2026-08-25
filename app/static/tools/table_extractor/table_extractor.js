@@ -330,7 +330,7 @@
         keyinEl.innerHTML =
             '<div class="te-keyin-head">PK 키 입력 <span class="count-badge">대상 ' + sel.length + '개 · PK ' + union.length + '개</span></div>'
             + '<div class="te-keyin-boxes">'
-            + renderKeyinBox('일반 PK', normalCols)
+            + renderKeyinBox('일반 PK', normalCols, '키값 다 채울 필요 없음. 쉼표로 구분하여 복수건의 키값 입력시 in절로 작성됨')
             + renderKeyinBox('날짜 PK', dateCols)
             + '</div>'
             + (missing.length
@@ -341,10 +341,13 @@
     }
 
     // 일반/날짜 PK 박스 하나(제목 + 필드 그리드, 자체 스크롤) 렌더. 컬럼이 없으면 박스 자체를 생략.
-    function renderKeyinBox(title, cols) {
+    // note는 제목 오른쪽에 붙는 보조 안내문(일반 PK의 "여러 개는 쉼표로 구분" 힌트 등, 선택).
+    function renderKeyinBox(title, cols, note) {
         if (!cols.length) return '';
         return '<div class="te-keyin-box">'
-            + '<div class="te-keyin-section-title">' + escapeHtml(title) + ' <span class="count-badge">' + cols.length + '개</span></div>'
+            + '<div class="te-keyin-section-title">' + escapeHtml(title) + ' <span class="count-badge">' + cols.length + '개</span>'
+            + (note ? ' <span class="te-keyin-section-note">' + escapeHtml(note) + '</span>' : '')
+            + '</div>'
             + '<div class="te-keyin-fields">'
             + cols.map(renderKeyinField).join('')
             + '</div>'
