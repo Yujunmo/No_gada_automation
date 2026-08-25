@@ -996,6 +996,14 @@
         var idType = typeSel.value;
         var ids = parseIds(idInput.value);
 
+        // 쉼표 대신 공백으로 여러 ID를 구분하면 comma split에서 안 나뉘어 공백 포함 문자열
+        // 하나가 ID 1개로 잘못 인식된다("A , B"처럼 쉼표 앞뒤 공백은 parseIds의 trim이 이미
+        // 처리해서 여기 안 걸림) — 서버까지 보내면 이상한 404로 나타나므로 화면에서 먼저 막는다.
+        if (ids.some(function (id) { return /\s/.test(id); })) {
+            showError('입력값 오류', 'ID는 쉼표(,)로만 구분해주세요. 공백으로 구분된 값이 있습니다.');
+            return;
+        }
+
         // 클라이언트 선검증: 서버의 422(장황한 pydantic 오류) 대신 친절한 메시지
         // DBIO는 리소스그룹을 받지 않음 → 2세그먼트 경로(생략). 그 외 타입만 리소스그룹을 검증해 3세그먼트로.
         var prog = null;
