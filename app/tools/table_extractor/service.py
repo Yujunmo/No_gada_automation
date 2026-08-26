@@ -6,12 +6,12 @@ from typing import Optional
 
 from app.common.io.db import DbClient
 from app.common.io.sftp import SourceError, SourceNotFound, SourceReader
-from app.common.parse.sql import ExtractionError, extract_tables
+from app.common.parse.sql import ExtractionError
 from app.common.proframe import Module_Type, ResourceGroup
 from app.common.proframe import db_schema
-from app.common.proframe.dbio import UnknownSqlType, read_dbio_xml
+from app.common.proframe.dbio import UnknownSqlType, dbio_referenced_tables
 from app.common.proframe.module_source import load_group_map, read_module_source
-from app.tools.table_extractor import dbio_sql, migrate
+from app.tools.table_extractor import migrate
 from app.tools.table_extractor.excludes import load_excluded_refs, load_excluded_tables
 from app.tools.table_extractor.refs import scan_module_refs
 
@@ -130,19 +130,10 @@ def extract_batch(
 
 
 def extract_from_dbio(file_id: str, reader: SourceReader) -> ExtractResult:
-    """DBIO 리프: XML 조회 → <sqlString> 추출 → 테이블 추출."""
-    xml_text = read_dbio_xml(file_id, reader)
-    logger.debug("extract_from_dbio: XML 조회 완료 file_id=%s (%d chars)", file_id, len(xml_text))
-
-    sqls = dbio_sql.extract_sql(xml_text)
-    logger.debug("extract_from_dbio: SQL %d개 추출 file_id=%s", len(sqls), file_id)
-
-    tables: set[str] = set()
-    for sql in sqls:
-        tables.update(extract_tables(sql))
+    """DBIO 리프: XML 조회 → <sqlString> 추출 → 테이블 추출(공용 dbio_referenced_tables 위임)."""
+    tables, sql = dbio_referenced_tables(file_id, reader)
     logger.debug("extract_from_dbio: 테이블 %d개 집계 file_id=%s", len(tables), file_id)
-
-    return ExtractResult(tables=sorted(tables), sql=";\n".join(sqls), dbios=[file_id])
+    return ExtractResult(tables=tables, sql=sql, dbios=[file_id])
 
 
 def extract_from_module(
