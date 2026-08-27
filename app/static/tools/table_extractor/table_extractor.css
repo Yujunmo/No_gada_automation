@@ -967,6 +967,7 @@
 
 .te-nogen-table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     font-size: 13px;
 }
@@ -976,6 +977,7 @@
     text-align: left;
     padding: 8px 12px;
     border: 1px solid var(--border-color);
+    overflow-wrap: break-word;
 }
 
 .te-nogen-table th {
@@ -985,13 +987,14 @@
 }
 
 .te-nogen-table td:first-child {
+    width: 32%;
     font-family: 'JetBrains Mono', monospace;
     color: var(--text-main);
 }
 
 .te-nogen-table td:last-child {
     color: var(--text-muted);
-    white-space: nowrap;
+    white-space: normal;
 }
 
 @media (max-width: 900px) {
