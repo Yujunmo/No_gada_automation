@@ -19,6 +19,10 @@
                 <ul id="ia-prog-list" class="ia-combo-list"></ul>
             </div>
             <input type="text" id="ia-search-input" placeholder="테이블명을 입력하세요 (예: PFO_FUND_BS)" autocomplete="off">
+            <div class="ia-group-filter" id="ia-group-filter">
+                <button type="button" class="ia-group-filter-btn" id="ia-group-filter-btn">업무그룹 전체</button>
+                <div class="ia-group-filter-panel" id="ia-group-filter-panel"></div>
+            </div>
             <button type="submit" class="ia-search-btn" id="ia-search-btn">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                     <circle cx="11" cy="11" r="6.5"/>
@@ -27,6 +31,8 @@
                 <span>검색</span>
             </button>
         </form>
+
+        <div class="ia-results" id="ia-results"></div>
     `;
 
     var form = container.querySelector('#ia-search-form');
@@ -35,12 +41,98 @@
     var progCombo = container.querySelector('#ia-prog-combo');
     var progInput = container.querySelector('#ia-prog');
     var progList = container.querySelector('#ia-prog-list');
+    var resultsEl = container.querySelector('#ia-results');
+    var groupFilter = container.querySelector('#ia-group-filter');
+    var groupFilterBtn = container.querySelector('#ia-group-filter-btn');
+    var groupFilterPanel = container.querySelector('#ia-group-filter-panel');
     var PLACEHOLDER = {
         table: '테이블명을 입력하세요 (예: PFO_FUND_BS)',
         biz: '비즈모듈명을 입력하세요 (예: MZPFM_FundInfoSave)',
     };
     // Table Extractor와 동일한 업무그룹 코드
     var PROG_OPTIONS = ['PCSP', 'PCSH', 'NCOM', 'NCSP', 'PCOM', 'PPFR', 'RLGR'];
+
+    // 업무그룹 필터: 선택 안 함(빈 Set) = 전체 대상. 다음 라운드의 DBIO→호출모듈 조회가
+    // getSelectedGroups()를 그대로 쿼리 파라미터로 넘겨 grep 범위를 좁히는 데 쓴다.
+    var selectedGroups = new Set();
+
+    function updateGroupFilterLabel() {
+        groupFilterBtn.textContent = selectedGroups.size
+            ? selectedGroups.size + '개 선택'
+            : '업무그룹 선택';
+    }
+
+    function updateToggleAllLabel() {
+        toggleAllBtn.textContent = selectedGroups.size === PROG_OPTIONS.length
+            ? '전체해제'
+            : '전체선택';
+    }
+
+    var toggleAllBtn = document.createElement('button');
+    toggleAllBtn.type = 'button';
+    toggleAllBtn.className = 'ia-group-filter-toggle-all';
+    toggleAllBtn.addEventListener('click', function () {
+        if (selectedGroups.size === PROG_OPTIONS.length) {
+            selectedGroups.clear();
+        } else {
+            PROG_OPTIONS.forEach(function (group) {
+                selectedGroups.add(group);
+            });
+        }
+        renderGroupFilterPanel();
+        updateGroupFilterLabel();
+    });
+
+    function renderGroupFilterPanel() {
+        groupFilterPanel.innerHTML = '';
+        updateToggleAllLabel();
+        groupFilterPanel.appendChild(toggleAllBtn);
+
+        PROG_OPTIONS.forEach(function (group) {
+            var label = document.createElement('label');
+            label.className = 'ia-group-filter-item';
+
+            var text = document.createElement('span');
+            text.className = 'ia-group-filter-item-text';
+            text.textContent = group;
+
+            var checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = group;
+            checkbox.checked = selectedGroups.has(group);
+            checkbox.addEventListener('change', function () {
+                if (checkbox.checked) {
+                    selectedGroups.add(group);
+                } else {
+                    selectedGroups.delete(group);
+                }
+                updateGroupFilterLabel();
+                updateToggleAllLabel();
+            });
+
+            label.appendChild(text);
+            label.appendChild(checkbox);
+            groupFilterPanel.appendChild(label);
+        });
+    }
+
+    function getSelectedGroups() {
+        return Array.from(selectedGroups);
+    }
+
+    renderGroupFilterPanel();
+    updateGroupFilterLabel();
+
+    groupFilterBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        groupFilterPanel.classList.toggle('open');
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!groupFilter.contains(e.target)) {
+            groupFilterPanel.classList.remove('open');
+        }
+    });
 
     // 비즈모듈 조회는 업무그룹이 필요하지만 테이블 조회는 필요 없다.
     function updateProgVisibility() {
@@ -88,7 +180,176 @@
         progList.classList.remove('open');
     });
 
+    function renderMessage(text) {
+        resultsEl.innerHTML = '';
+        var p = document.createElement('p');
+        p.className = 'ia-empty';
+        p.textContent = text;
+        resultsEl.appendChild(p);
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text == null ? '' : String(text);
+        return div.innerHTML;
+    }
+
+    // 현재 펼쳐가고 있는 조상 체인(루트→현재 직전까지의 {refType, refId} 목록). Biz는
+    // 서로를 순환 참조할 수 있어(A가 B를 부르고 B가 다시 A를 부르는 등), 그 체인에 이미
+    // 있는 id를 다시 후보로 보여주면 사용자가 끝없이 펼치는 루프에 빠질 수 있다 — 그래서
+    // 결과에서 조상과 같은 id는 아예 숨긴다.
+    function isAncestor(ancestors, refType, refId) {
+        return ancestors.some(function (a) {
+            return a.refType === refType && a.refId === refId;
+        });
+    }
+
+    // DBIO 펼침 바디 안의 한 그룹(Service/Batch, 확장 불가) — 비어 있으면 "없음" 문구만 표시.
+    function renderCallerGroup(label, ids) {
+        if (!ids || !ids.length) {
+            return '<div class="ia-caller-group ia-caller-group-empty">' + escapeHtml(label) + ' 없음</div>';
+        }
+        return `
+            <div class="ia-caller-group">
+                <div class="ia-caller-group-title">${escapeHtml(label)} <span class="count-badge">${ids.length}개</span></div>
+                <ul class="ia-caller-items">
+                    ${ids.map(function (id) { return '<li>' + escapeHtml(id) + '</li>'; }).join('')}
+                </ul>
+            </div>
+        `;
+    }
+
+    // 하나의 펼침 가능 항목(DBIO 최상위 또는 재귀 중인 Biz)을 만들고 토글을 바로 연결한다.
+    function makeExpandableItem(refType, refId, ancestors) {
+        var li = document.createElement('li');
+        li.className = 'ia-dbio-item';
+        li.innerHTML = `
+            <button type="button" class="ia-dbio-toggle" aria-expanded="false">
+                <span class="ia-dbio-chevron">▶</span>
+                <span class="ia-dbio-id">${escapeHtml(refId)}</span>
+            </button>
+            <div class="ia-dbio-body ia-dbio-body-collapsed"></div>
+        `;
+        var btn = li.querySelector('.ia-dbio-toggle');
+        var body = li.querySelector('.ia-dbio-body');
+
+        btn.addEventListener('click', function () {
+            var wasExpanded = btn.getAttribute('aria-expanded') === 'true';
+            btn.setAttribute('aria-expanded', String(!wasExpanded));
+            btn.querySelector('.ia-dbio-chevron').textContent = wasExpanded ? '▶' : '▼';
+            body.classList.toggle('ia-dbio-body-collapsed', wasExpanded);
+
+            if (!wasExpanded && !body.dataset.loaded) {
+                loadCallers(refType, refId, body, ancestors.concat([{ refType: refType, refId: refId }]));
+            }
+        });
+
+        return li;
+    }
+
+    // Biz 그룹은 확장 가능 — 조상 체인에 이미 있는 id는 순환 방지를 위해 목록에서 뺀다.
+    function renderBizGroup(ids, ancestors) {
+        var visible = (ids || []).filter(function (id) {
+            return !isAncestor(ancestors, 'biz', id);
+        });
+
+        var wrap = document.createElement('div');
+        wrap.className = 'ia-caller-group';
+
+        if (!visible.length) {
+            wrap.classList.add('ia-caller-group-empty');
+            wrap.textContent = 'Biz 없음';
+            return wrap;
+        }
+
+        var title = document.createElement('div');
+        title.className = 'ia-caller-group-title';
+        title.textContent = 'Biz ';
+        var badge = document.createElement('span');
+        badge.className = 'count-badge';
+        badge.textContent = visible.length + '개';
+        title.appendChild(badge);
+        wrap.appendChild(title);
+
+        var ul = document.createElement('ul');
+        ul.className = 'ia-dbio-list';
+        visible.forEach(function (id) {
+            ul.appendChild(makeExpandableItem('biz', id, ancestors));
+        });
+        wrap.appendChild(ul);
+
+        return wrap;
+    }
+
+    // DBIO(또는 Biz) 하나를 펼쳤을 때 그 바디에 호출 모듈(service/biz/batch)을 채운다.
+    // 업무그룹 필터가 선택돼 있으면 grep 범위를 좁히도록 그대로 쿼리 파라미터로 넘긴다.
+    // refType은 "dbio" 또는 "biz" — 백엔드 라우트가 /callers/{ref_type}/{ref_id} 형태.
+    // ancestors는 여기까지 펼쳐온 조상 체인(순환 참조 방지용, Biz 재귀 펼치기에서 씀).
+    function loadCallers(refType, refId, body, ancestors) {
+        body.innerHTML = '<p class="ia-empty">조회 중...</p>';
+        var qs = getSelectedGroups()
+            .map(function (g) { return 'resource_groups=' + encodeURIComponent(g); })
+            .join('&');
+        var url = 'impact-analysis/callers/' + refType + '/' + encodeURIComponent(refId) + (qs ? '?' + qs : '');
+
+        fetch(url)
+            .then(function (res) {
+                return res.json().then(function (data) {
+                    if (!res.ok) throw new Error(data.detail || '조회에 실패했습니다.');
+                    return data;
+                });
+            })
+            .then(function (data) {
+                body.dataset.loaded = 'true';
+                body.innerHTML = renderCallerGroup('Service', data.services);
+                body.appendChild(renderBizGroup(data.bizs, ancestors));
+                body.insertAdjacentHTML('beforeend', renderCallerGroup('Batch', data.batches));
+            })
+            .catch(function (err) {
+                delete body.dataset.loaded;
+                body.innerHTML = '<p class="ia-empty">' + escapeHtml(err.message || '조회에 실패했습니다.') + '</p>';
+            });
+    }
+
+    function renderDbios(dbios) {
+        resultsEl.innerHTML = '';
+        if (!dbios.length) {
+            renderMessage('참조하는 DBIO를 찾지 못했습니다.');
+            return;
+        }
+        var ul = document.createElement('ul');
+        ul.className = 'ia-dbio-list';
+        dbios.forEach(function (id) {
+            ul.appendChild(makeExpandableItem('dbio', id, []));
+        });
+        resultsEl.appendChild(ul);
+    }
+
     form.addEventListener('submit', function (e) {
         e.preventDefault();
+
+        var query = searchInput.value.trim();
+        if (!query) return;
+
+        if (typeSel.value !== 'table') {
+            renderMessage('비즈모듈 검색은 아직 지원하지 않습니다.');
+            return;
+        }
+
+        renderMessage('검색 중...');
+
+        fetch('impact-analysis/dbios/' + encodeURIComponent(query))
+            .then(function (res) {
+                return res.json().then(function (data) {
+                    if (!res.ok) throw new Error(data.detail || '조회에 실패했습니다.');
+                    return data;
+                });
+            })
+            .then(function (data) {
+                renderDbios(data.dbios);
+            })
+            .catch(function (err) {
+                renderMessage(err.message || '조회에 실패했습니다.');
+            });
     });
 }());

@@ -10,12 +10,17 @@ COMPILE_ROOT를 나열(listdir)해 후보 경로를 순서대로 read 시도하�
 from __future__ import annotations
 
 import os
+import re
 
 from app.common.io.sftp import SourceNotFound, SourceReader
 from app.common.proframe.types import PROFRAME_ROOT, Module_Type
 
 COMPILE_ROOT = f"{PROFRAME_ROOT}/compile"
 MODULE_SUBDIR = {"service": "serviceModule", "batch": "batch", "biz": "module"}
+_MODULE_TYPE_BY_SUBDIR = {sub: module_type for module_type, sub in MODULE_SUBDIR.items()}
+_MODULE_PATH_RE = re.compile(
+    rf"^{re.escape(COMPILE_ROOT)}/([^/]+)/src/({'|'.join(re.escape(s) for s in MODULE_SUBDIR.values())})/(.+)\.c$"
+)
 
 DEFAULT_GROUP_MAP_PATH = "config/module_group_map.txt"
 
@@ -30,6 +35,24 @@ def _relpath(module_type: Module_Type, file_id: str) -> str:
 def module_path(module_type: Module_Type, resource_group: str, file_id: str) -> str:
     """업무그룹을 알 때(최상위 진입 모듈) 경로를 직접 조합한다."""
     return f"{COMPILE_ROOT}/{resource_group}/src/{_relpath(module_type, file_id)}"
+
+
+def parse_module_path(path: str) -> tuple[Module_Type, str, str] | None:
+    """`module_path()`의 역함수 — 원격 경로를 (module_type, resource_group, file_id)로 되돌린다.
+
+    grep 등으로 얻은 경로가 이 디렉터리 규약(`COMPILE_ROOT/<그룹>/src/<서브디렉터리>/...`)과
+    다르면 예외 대신 `None`을 돌려준다 — 호출부가 "판별 실패"를 조용히 skip으로 처리할 수
+    있게(impact_analysis의 역방향 확정 파싱이 grep 후보 경로를 걸러낼 때 씀). `service`만
+    `<id>/<id>.c`로 한 겹 더 중첩되므로(`_relpath` 참고) 마지막 경로 세그먼트를 file_id로
+    쓴다 — biz/batch는 애초에 세그먼트가 하나뿐이라 같은 규칙이 그대로 맞는다.
+    """
+    m = _MODULE_PATH_RE.match(path)
+    if not m:
+        return None
+    resource_group, subdir, rest = m.groups()
+    module_type = _MODULE_TYPE_BY_SUBDIR[subdir]
+    file_id = rest.rsplit("/", 1)[-1]
+    return module_type, resource_group, file_id
 
 
 def read_module_source(
@@ -73,6 +96,9 @@ def read_module_source(
     )
 
 
+
+## build_group_map, load_group_map, write_group_map 세트임. config/module_group_map.txt 를 작성 및 읽기 위한 함수임
+## 모듈 탐색시, 매핑 정보를 바탕으로 탐색 속도를 개선하기 위함
 def build_group_map(reader: SourceReader) -> dict[tuple[str, str], str]:
     """COMPILE_ROOT 전체를 나열해 (module_type, file_id) -> resource_group 매핑을 새로 만든다.
 
