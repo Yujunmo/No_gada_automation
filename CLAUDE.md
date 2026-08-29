@@ -81,7 +81,7 @@ pytest -k dual
 - `parse/text_sanitize.py`의 `sanitize_text(text) -> (cleaned, removed)`: 유니코드 카테고리 기준으로 `Cf`(제로폭·BOM·소프트하이픈·방향마크) 제거, `Zs`(NBSP·전각공백) → 일반 공백, 탭/개행은 보존. **멱등**이라 경계(라우터)에서 다시 호출해도 무해.
 - `parse/sql.py`의 `extract_tables` / `ExtractionError`: Oracle SQL 테이블 추출(위 파이프라인 참고). `sql_bench`·`table_extractor` 공용.
 - `parse/sql.py`의 `strip_db_links(sql) -> (cleaned, links)`: `@dblink` 텍스트 제거(문자열·주석 내부 `@` 보존). `extract_tables`가 파싱 전처리로 호출.
-- `parse/c_source.py`의 `strip_comments(text) -> (cleaned, removed_count)`: C 소스에서 `//` 줄 주석 / `/* */` 블록 주석 제거(`removed`는 **제거한 주석 개수**, 목록이 아님). 문자열·문자 리터럴 내부의 `//` `/*`는 상태 기계로 보존, 주석 자리에는 개행을 남겨 원본 줄 번호 유지. `table_extractor.refs`가 콜 매크로 정규식 매칭 전에 사용(주석 처리된 죽은 코드에 실제 콜 매크로 형태가 남아 있어 오탐 방지).
+- `parse/c_source.py`의 `strip_comments(text) -> (cleaned, removed_count)`: C 소스에서 `//` 줄 주석 / `/* */` 블록 주석 제거(`removed`는 **제거한 주석 개수**, 목록이 아님). 문자열·문자 리터럴 내부의 `//` `/*`는 상태 기계로 보존, 주석 자리에는 개행을 남겨 원본 줄 번호 유지. `proframe/refs.py`가 콜 매크로 정규식 매칭 전에 사용(주석 처리된 죽은 코드에 실제 콜 매크로 형태가 남아 있어 오탐 방지).
 
 **`io/`** — 순수 I/O 어댑터 (프로토콜 교체 지점, 테스트에서 fake로 대체):
 - `io/sftp.py`의 `SourceReader`(Protocol) / `SftpSourceReader` / `SourceNotFound`·`SourceError` / `default_reader()`: 원격 소스 I/O 인프라(경로→내용 문자열). 회사 서버가 SFTP라 paramiko 기반. `default_reader()`는 env(`NOGADA_SFTP_HOST/_PORT/_USER/_PASS/_BASE`, 기본값 `remote_ssh_server` 127.0.0.1:2222/testuser)에서 `SftpSourceReader`를 조립하는 팩토리. 라우터에 `Depends(default_reader)`로 주입 → 테스트에서 `app.dependency_overrides`로 인메모리 fake reader 교체 가능. 바이트→문자열 디코딩 인코딩은 `NOGADA_SOURCE_ENCODING`(기본 `utf-8`)로 지정 — 회사 서버가 UTF-8이 아니면(EUC-KR/CP949 등) 반입 시 이 값만 바꾸면 된다. `io/ssh.py`의 `default_command_runner()`(SSH 명령 실행 인프라, 같은 회사 서버·같은 `NOGADA_SFTP_*` 접속정보 공유)도 이 env를 그대로 쓴다. 이 프로그램이 로컬에 읽고 쓰는 텍스트 파일(`excludes.py`의 `config/excluded_refs.txt`·`excluded_tables.txt`, `module_source.py`의 `config/module_group_map.txt`, `main.py`의 `logs/no_gada.log`)도 같은 env를 따른다 — 회사 로컬 환경(텍스트 편집기 등)에서 이 파일들을 직접 열어볼 수 있어 인코딩을 일관되게 맞춰둔다.
@@ -94,6 +94,7 @@ pytest -k dual
 - `proframe/dbio.py`의 `read_dbio_xml(file_id, reader) -> str` / `classify_sqltype(file_id) -> str` / `UnknownSqlType`: DBIO ID로 원격 XML을 읽는 범용 동작. 실물 파일이 `release/dbio/xml/<ID>.xml`로 **평면 배치**(`DBIO_RESOURCE_ROOT`)라 경로는 `{ROOT}/<ID>.xml` 1회 조합·조회로 끝난다. `classify_sqltype`(`SQL_TYPE_BY_SUFFIX`/`ID_SUFFIX_RE`, ID 끝 2글자 코드)로 **접미사가 인식 가능한 DBIO ID인지 검증**해 잘못된 ID를 파일없음(404)보다 명확한 400으로 먼저 거른다.
 - `proframe/module_source.py`의 `read_module_source(...)` / `module_path(...)` / `build_group_map(...)` / `load_group_map(...)` / `write_group_map(...)` / `COMPILE_ROOT`: service/batch/biz 모듈 C 소스 위치 규칙 + 조회(`dbio.py`의 자매). 최상위 진입은 `resource_group`을 알고 있어 `module_path`로 직접 조합, 재귀 중 발견한 참조는 `resource_group` 불명이라 우선 `group_map`(사전 매핑) 조회 후 실패 시 `COMPILE_ROOT`를 listdir해 순차 탐색(find 폴백). `load_group_map()`은 env `NOGADA_MODULE_GROUP_MAP_PATH`(기본 `config/module_group_map.txt`)에서 로드. `build/write_group_map`은 오프라인 배치에서만 사용.
 - `proframe/db_schema.py`의 `fetch_pk_columns(tables, db) -> {테이블: [PK컬럼]}`: `all_tables`(테이블→PK컬럼 매핑, 복합키는 여러 행)를 **1회 쿼리**로 조회해 테이블별 PK 컬럼을 돌려주는 딕셔너리 조회 도메인 로직. 입력을 대문자·중복 정규화하고 요청한 모든 테이블을 키로 포함(딕셔너리에 없으면 `[]`), 컬럼 순서는 DB 행 순서 보존. `io/db.py` 위에 얹힌 층. table_extractor의 `/pks`·`/migrate-sql`이 사용.
+- `proframe/refs.py`의 `scan_module_refs(text) -> list[tuple[Module_Type, str]]`(`dbio_sql.py`의 자매): C 소스 텍스트에서 콜 매크로 기반으로 `(타입, ID)` 참조를 등장순·중복제거로 뽑는다(`pfmDbio*`=dbio, `pfmDlCall`=biz, `pfmServiceModuleCall`=service, batch는 전용 매크로가 없어 `"B<업무그룹><suffix>"` 리터럴 패턴으로 별도 스캔). 정규식 매칭 전 `c_source.strip_comments`로 주석 속 죽은 코드를 걷어낸다. table_extractor가 정방향(모듈 소스 → 참조 대상)에 먼저 썼고, impact_analysis의 역방향(참조 후보를 찾은 뒤 실제 참조인지 확정)도 같은 파싱이 필요해 공용으로 승격.
 
 ### 환경변수(`.env`)
 `python-dotenv`가 core dependency이고, `app/main.py`가 다른 어떤 것보다 먼저 `load_dotenv()`를 호출해 `.env`(레포 루트)를 `os.environ`에 반영한다. 이미 export된 OS 환경변수는 `.env` 값보다 우선한다(`load_dotenv()` 기본 `override=False`). 템플릿은 `.env.example`(커밋됨) — `cp .env.example .env`로 시작. 대상 15개 변수: `NOGADA_DB_*`(6, 위 `io/db.py` 참고 — 템플릿은 MySQL 블록이 활성화·Oracle 블록은 주석으로 나란히 제공), `NOGADA_SFTP_*`(5, `io/sftp.py`) + `NOGADA_SOURCE_ENCODING`(SFTP/SSH 공용 디코딩 인코딩, 기본 `utf-8`), `NOGADA_EXCLUDED_REFS_PATH`/`NOGADA_MODULE_GROUP_MAP_PATH`/`NOGADA_EXCLUDED_TABLES_PATH`(경로 오버라이드 3종, 기본값 그대로면 생략 가능). **주의**: 코드의 하드코딩 기본값(`_build_url_from_env()`)은 Oracle이지만 `.env.example`의 활성 블록은 MySQL이 먼저 온다 — `.env`를 만들지 않고 그냥 실행하면 Oracle 기본값으로, `.env.example`을 그대로 복사하면 MySQL로 붙는다는 차이를 인지할 것.
@@ -105,7 +106,7 @@ pytest -k dual
 
 **1) DBIO(리프)** — `extract_from_dbio`:
 1. `dbio.read_dbio_xml`(공용): ID 접미사 검증(`classify_sqltype`) → `release/dbio/xml/<ID>.xml` 조회. 인식 못 하는 접미사는 `UnknownSqlType`(→400).
-2. `dbio_sql.extract_sql`(table_extractor 전용): ProFrame published XML에서 `<sqlString>` 텍스트 수집(루트 태그/네임스페이스 무관, 로컬네임 매칭, XML 파싱 실패 시 정규식 폴백). 바인드는 이미 Oracle `:name`이라 치환 없음.
+2. `dbio_sql.extract_sql`(공용, `app/common/proframe/dbio_sql.py`): ProFrame published XML에서 `<sqlString>` 텍스트 수집(루트 태그/네임스페이스 무관, 로컬네임 매칭, XML 파싱 실패 시 정규식 폴백). 바인드는 이미 Oracle `:name`이라 치환 없음.
 3. 각 SQL을 `extract_tables`로 돌려 테이블 합집합. `dbios=[file_id]`(자기 자신 self-inclusion).
 
 **2) Service/Batch/Biz(재귀 DFS)** — `extract_from_module(module_type, resource_group, file_id, reader, visited, excluded, group_map)`:
@@ -188,14 +189,15 @@ app/
     proframe/__init__.py      #   types 재수출 (from app.common.proframe import Module_Type)
     proframe/types.py         #   Module_Type/ResourceGroup/PROFRAME_ROOT (ProFrame ID 분류 체계)
     proframe/dbio.py          #   read_dbio_xml 등 (DBIO ID → 원격 XML 조회, io/sftp 위)
+    proframe/dbio_sql.py      #   extract_sql (DBIO published XML → <sqlString> 추출, 순수)
     proframe/module_source.py #   read_module_source 등 (service/batch/biz 모듈 C 소스 조회, io/sftp 위)
     proframe/db_schema.py     #   fetch_pk_columns (all_tables → 테이블별 PK 컬럼, io/db 위)
+    proframe/refs.py          #   scan_module_refs (C 소스 → (type, id) 참조 스캔, 정규식 기반: dbio/biz/service/batch)
   tools/sql_bench/router.py   # SQL 텍스트 → 테이블
+  tools/meta/router.py        # GET /meta/resource-groups (ResourceGroup을 프론트에 노출 — 프론트 하드코딩 방지)
   tools/table_extractor/
     router.py                 #   라우터, HTTP 상태 매핑
     service.py                 #   ExtractResult, extract()/extract_from_dbio()/extract_from_module()(재귀 DFS)/migrate_sql()
-    dbio_sql.py                 #   DBIO published XML → <sqlString> 추출
-    refs.py                     #   C 소스 → (type, id) 참조 스캔 (정규식 기반: dbio/biz/service/batch)
     excludes.py                 #   config/excluded_refs.txt·excluded_tables.txt 조회+저장 ("항상 제외" 목록 2종, 설정 팝업이 사용)
     migrate.py                  #   이관 SQL 생성(순수)
   static/
@@ -208,14 +210,16 @@ tests/
   common/test_csource.py      # strip_comments 단위 테스트
   common/test_db.py           # db.py 단위 테스트 (default_db 팩토리 + dialect 전환 + fake client Protocol)
   common/test_schema.py       # fetch_pk_columns 단위 테스트 (fake db 주입)
-  common/test_module_src.py   # read_module_source / group_map 단위 테스트
+  common/test_module_src.py   # read_module_source / group_map / module_path·parse_module_path 왕복 단위 테스트
+  common/test_refs.py         # scan_module_refs 단위 테스트
   common/test_sftp.py         # default_reader() 팩토리의 env(NOGADA_SFTP_*/_SOURCE_ENCODING) 반영 단위 테스트(네트워크 없음)
   common/test_ssh.py          # default_command_runner() 팩토리의 env 반영 단위 테스트(네트워크 없음)
   tools/test_sql_bench.py     # SQL Bench 회귀 케이스
+  tools/test_meta.py          # GET /meta/resource-groups 단위 테스트
   tools/test_table_extractor.py  # Table Extractor (dbio/재귀/라우터/pks/migrate-sql/excluded-tables/excluded-refs, fake reader·db 주입)
   tools/test_migrate.py       # 이관 SQL 생성 순수 함수(build_migration_sql: WHERE·제외·그룹핑)
   tools/test_excludes.py      # load/save_excluded_refs·load/save_excluded_tables 단위 테스트(인코딩 전환 포함)
-  tools/test_refs.py          # scan_module_refs 단위 테스트
+  tools/test_impact_analysis.py  # Impact Analysis (find_dbios: grep 후보 → 파싱 확정, fake searcher·reader 주입)
 config/
   excluded_refs.txt           # NOGADA_EXCLUDED_REFS_PATH 기본 경로(재귀 참조 제외, 설정 팝업 "모듈 예외처리" 탭이 저장)
   excluded_tables.txt         # NOGADA_EXCLUDED_TABLES_PATH 기본 경로(추출 결과 테이블 제외, 설정 팝업 "테이블 추출 예외처리" 탭이 저장, 최초 저장 전엔 파일 없음)
