@@ -243,8 +243,55 @@
     cursor: pointer;
 }
 
-.ia-results {
+/* 좌(검색 결과)/우(집계) 워크스페이스 — table_extractor의 .extractor-workspace와 같은 패턴. */
+.ia-workspace {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr;
+    gap: 24px;
+    align-items: stretch;
     margin-top: 20px;
+    min-height: 420px;
+}
+
+.ia-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+}
+
+.ia-panel-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-main);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+}
+
+.ia-results {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.ia-summary {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+@media (max-width: 900px) {
+    .ia-workspace {
+        grid-template-columns: 1fr;
+    }
 }
 
 .ia-empty {
@@ -334,6 +381,41 @@
 }
 
 .ia-caller-items li {
+    padding: 6px 10px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    color: var(--text-main);
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+}
+
+/* 우측 집계 패널 — DBIO/Service/Biz/Batch 그룹별로 지금까지 펼쳐본 결과를 중복 없이 쌓아 보여준다. */
+.ia-summary-group-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 6px;
+}
+
+.ia-summary-group-empty {
+    font-size: 13px;
+    color: #8a8580;
+}
+
+.ia-summary-items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ia-summary-items li {
     padding: 6px 10px;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 13px;

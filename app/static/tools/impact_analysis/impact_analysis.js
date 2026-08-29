@@ -32,7 +32,24 @@
             </button>
         </form>
 
-        <div class="ia-results" id="ia-results"></div>
+        <div class="ia-workspace">
+            <div class="card ia-panel">
+                <div class="ia-panel-title">검색 결과</div>
+                <div class="ia-results" id="ia-results"></div>
+            </div>
+            <div class="card ia-panel">
+                <div class="ia-panel-title">
+                    <span>집계</span>
+                    <button type="button" class="copy-btn" id="ia-summary-copy-btn" title="집계 결과 전체 복사">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke-width="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-width="2"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="ia-summary" id="ia-summary"></div>
+            </div>
+        </div>
     `;
 
     var form = container.querySelector('#ia-search-form');
@@ -42,6 +59,8 @@
     var progInput = container.querySelector('#ia-prog');
     var progList = container.querySelector('#ia-prog-list');
     var resultsEl = container.querySelector('#ia-results');
+    var summaryEl = container.querySelector('#ia-summary');
+    var summaryCopyBtn = container.querySelector('#ia-summary-copy-btn');
     var groupFilter = container.querySelector('#ia-group-filter');
     var groupFilterBtn = container.querySelector('#ia-group-filter-btn');
     var groupFilterPanel = container.querySelector('#ia-group-filter-panel');
@@ -194,6 +213,67 @@
         return div.innerHTML;
     }
 
+    // 우측 집계 패널 상태 — 지금까지 "펼쳐본" 결과만 실시간으로 누적(A안: 전체를 강제로
+    // 다 펼치는 완전 집계가 아니라, 사용자가 실제로 조회한 것만 중복 제거해 쌓는 방식).
+    // 새 검색을 시작하면 초기화한다.
+    var agg = {
+        dbios: new Set(),
+        services: new Set(),
+        bizs: new Set(),
+        batches: new Set(),
+    };
+
+    function resetAggregate() {
+        agg.dbios.clear();
+        agg.services.clear();
+        agg.bizs.clear();
+        agg.batches.clear();
+        renderSummary();
+    }
+
+    function renderSummaryGroup(label, set) {
+        var ids = Array.from(set).sort();
+        if (!ids.length) {
+            return '<div class="ia-summary-group ia-summary-group-empty">' + escapeHtml(label) + ' 없음</div>';
+        }
+        return `
+            <div class="ia-summary-group">
+                <div class="ia-summary-group-title">${escapeHtml(label)} <span class="count-badge">${ids.length}개</span></div>
+                <ul class="ia-summary-items">
+                    ${ids.map(function (id) { return '<li>' + escapeHtml(id) + '</li>'; }).join('')}
+                </ul>
+            </div>
+        `;
+    }
+
+    function renderSummary() {
+        summaryEl.innerHTML =
+            renderSummaryGroup('DBIO', agg.dbios) +
+            renderSummaryGroup('Service', agg.services) +
+            renderSummaryGroup('Biz', agg.bizs) +
+            renderSummaryGroup('Batch', agg.batches);
+    }
+
+    renderSummary();
+
+    // 집계 전체를 클립보드에 복사 — 그룹별로 한 줄, id는 쉼표로 구분(빈 그룹은 "없음").
+    summaryCopyBtn.addEventListener('click', function () {
+        if (!agg.dbios.size && !agg.services.size && !agg.bizs.size && !agg.batches.size) {
+            App.showToast('복사할 집계 결과가 없습니다.');
+            return;
+        }
+        var lines = [
+            ['DBIO', agg.dbios],
+            ['Service', agg.services],
+            ['Biz', agg.bizs],
+            ['Batch', agg.batches],
+        ].map(function (entry) {
+            var ids = Array.from(entry[1]).sort();
+            return '[' + entry[0] + '] ' + (ids.length ? ids.join(', ') : '없음');
+        });
+        App.copyToClipboard(lines.join('\n'), '집계 결과가 클립보드에 복사되었습니다.');
+    });
+
     // 현재 펼쳐가고 있는 조상 체인(루트→현재 직전까지의 {refType, refId} 목록). Biz는
     // 서로를 순환 참조할 수 있어(A가 B를 부르고 B가 다시 A를 부르는 등), 그 체인에 이미
     // 있는 id를 다시 후보로 보여주면 사용자가 끝없이 펼치는 루프에 빠질 수 있다 — 그래서
@@ -304,6 +384,11 @@
                 body.innerHTML = renderCallerGroup('Service', data.services);
                 body.appendChild(renderBizGroup(data.bizs, ancestors));
                 body.insertAdjacentHTML('beforeend', renderCallerGroup('Batch', data.batches));
+
+                data.services.forEach(function (id) { agg.services.add(id); });
+                data.bizs.forEach(function (id) { agg.bizs.add(id); });
+                data.batches.forEach(function (id) { agg.batches.add(id); });
+                renderSummary();
             })
             .catch(function (err) {
                 delete body.dataset.loaded;
@@ -321,8 +406,10 @@
         ul.className = 'ia-dbio-list';
         dbios.forEach(function (id) {
             ul.appendChild(makeExpandableItem('dbio', id, []));
+            agg.dbios.add(id);
         });
         resultsEl.appendChild(ul);
+        renderSummary();
     }
 
     form.addEventListener('submit', function (e) {
@@ -336,6 +423,7 @@
             return;
         }
 
+        resetAggregate();
         renderMessage('검색 중...');
 
         fetch('impact-analysis/dbios/' + encodeURIComponent(query))
