@@ -6,12 +6,13 @@ from app.common.proframe.module_source import (
     build_group_map,
     load_group_map,
     module_path,
+    parse_module_path,
     read_module_source,
     write_group_map,
 )
 from app.common.io.sftp import SourceNotFound, SourceReader
 
-COMPILE_ROOT = "/src/truap01dap1/proframe/proframe5.0/compile"
+COMPILE_ROOT = "/truap01dap1/proframe/proframe5.0/compile"
 
 
 class FakeReader:
@@ -43,18 +44,36 @@ def test_fake_satisfies_protocol():
 def test_module_path_service_nests_under_own_id_dir():
     path = module_path("service", "PCSP", "SPCSP53619C")
     assert path == (
-        "/src/truap01dap1/proframe/proframe5.0/compile/PCSP/src/serviceModule/SPCSP53619C/SPCSP53619C.c"
+        "/truap01dap1/proframe/proframe5.0/compile/PCSP/src/serviceModule/SPCSP53619C/SPCSP53619C.c"
     )
 
 
 def test_module_path_batch():
     path = module_path("batch", "RLGR", "BRLGRPRP0001")
-    assert path == "/src/truap01dap1/proframe/proframe5.0/compile/RLGR/src/batch/BRLGRPRP0001.c"
+    assert path == "/truap01dap1/proframe/proframe5.0/compile/RLGR/src/batch/BRLGRPRP0001.c"
 
 
 def test_module_path_biz():
     path = module_path("biz", "PCOM", "MPCOM_GetBzopDate")
-    assert path == "/src/truap01dap1/proframe/proframe5.0/compile/PCOM/src/module/MPCOM_GetBzopDate.c"
+    assert path == "/truap01dap1/proframe/proframe5.0/compile/PCOM/src/module/MPCOM_GetBzopDate.c"
+
+
+@pytest.mark.parametrize(
+    "module_type, resource_group, file_id",
+    [
+        ("service", "PCSP", "SPCSP53619C"),
+        ("batch", "RLGR", "BRLGRPRP0001"),
+        ("biz", "PCOM", "MPCOM_GetBzopDate"),
+    ],
+)
+def test_parse_module_path_round_trips_with_module_path(module_type, resource_group, file_id):
+    path = module_path(module_type, resource_group, file_id)
+    assert parse_module_path(path) == (module_type, resource_group, file_id)
+
+
+def test_parse_module_path_rejects_path_outside_convention():
+    assert parse_module_path("/truap01dap1/proframe/proframe5.0/release/dbio/xml/pfmDbioFOO.xml") is None
+    assert parse_module_path("/some/unrelated/path.c") is None
 
 
 def test_read_with_resource_group_reads_directly():
@@ -67,7 +86,7 @@ def test_read_without_resource_group_finds_across_groups():
     path = module_path("biz", "PCOM", "MPCOM_GetBzopDate")
     reader = FakeReader(
         files={path: "int main() {}"},
-        dirs={"/src/truap01dap1/proframe/proframe5.0/compile": ["PCSP", "PCOM", "RLGR"]},
+        dirs={"/truap01dap1/proframe/proframe5.0/compile": ["PCSP", "PCOM", "RLGR"]},
     )
     assert read_module_source("biz", "MPCOM_GetBzopDate", reader) == "int main() {}"
 
@@ -75,7 +94,7 @@ def test_read_without_resource_group_finds_across_groups():
 def test_read_without_resource_group_not_found_raises():
     reader = FakeReader(
         files={},
-        dirs={"/src/truap01dap1/proframe/proframe5.0/compile": ["PCSP", "PCOM"]},
+        dirs={"/truap01dap1/proframe/proframe5.0/compile": ["PCSP", "PCOM"]},
     )
     with pytest.raises(SourceNotFound):
         read_module_source("biz", "MPCOM_NoSuchModule", reader)

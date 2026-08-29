@@ -2,7 +2,7 @@
 Table Extractor 회귀 테스트.
 
 네트워크 없이(인메모리 fake reader) DBIO 추출 파이프라인 전체(dbio → dbio_sql → service → router)와
-REST 계약(경로 파라미터 검증, 에러 매핑)을 고정한다. 픽스처는 remote_ap_server/files/의 실물 DBIO XML.
+REST 계약(경로 파라미터 검증, 에러 매핑)을 고정한다. 픽스처는 remote_ssh_server/truap01dap1/의 실물 DBIO XML.
 """
 from __future__ import annotations
 
@@ -16,18 +16,19 @@ from app.common.io.db import DbError, Params, Row, default_db
 from app.common.proframe.module_source import COMPILE_ROOT, module_path
 from app.common.io.sftp import SourceNotFound, default_reader
 from app.main import app
-from app.tools.table_extractor import dbio_sql, service
+from app.common.proframe import dbio_sql
+from app.tools.table_extractor import service
 
 FIXTURE_ROOT = (
     Path(__file__).resolve().parents[2]
-    / "remote_ap_server" / "files" / "truap01dap1" / "proframe" / "proframe5.0"
+    / "remote_ssh_server" / "truap01dap1" / "proframe" / "proframe5.0"
     / "release" / "dbio" / "xml"
 )
-DS200_XML = (FIXTURE_ROOT / "PFO_STCK_MA_DS200.xml").read_text("utf-8")
-EI901_XML = (FIXTURE_ROOT / "PFO_MNCM_CLCD_HT_EI901.xml").read_text("utf-8")
+DS200_XML = (FIXTURE_ROOT / "pfmDbioPFO_STCK_MA_DS200.xml").read_text("utf-8")
+EI901_XML = (FIXTURE_ROOT / "pfmDbioPFO_MNCM_CLCD_HT_EI901.xml").read_text("utf-8")
 
-DS200_PATH = f"{dbio.DBIO_RESOURCE_ROOT}/PFO_STCK_MA_DS200.xml"
-EI901_PATH = f"{dbio.DBIO_RESOURCE_ROOT}/PFO_MNCM_CLCD_HT_EI901.xml"
+DS200_PATH = f"{dbio.DBIO_RESOURCE_ROOT}/{dbio.DBIO_FILENAME_PREFIX}PFO_STCK_MA_DS200.xml"
+EI901_PATH = f"{dbio.DBIO_RESOURCE_ROOT}/{dbio.DBIO_FILENAME_PREFIX}PFO_MNCM_CLCD_HT_EI901.xml"
 
 
 class FakeReader:
@@ -133,7 +134,7 @@ def test_read_dbio_xml_not_found():
 
 COMPILE_FIXTURE_ROOT = (
     Path(__file__).resolve().parents[2]
-    / "remote_ap_server" / "files" / "truap01dap1" / "proframe" / "proframe5.0" / "compile"
+    / "remote_ssh_server" / "truap01dap1" / "proframe" / "proframe5.0" / "compile"
 )
 GETBZOPDATE_SRC = (COMPILE_FIXTURE_ROOT / "PCOM/src/module/MPCOM_GetBzopDate.c").read_text("utf-8")
 GETBZOPDATE_PATH = module_path("biz", "PCOM", "MPCOM_GetBzopDate")
@@ -147,7 +148,7 @@ def _synth_dbio_xml(table: str) -> str:
 def _getbzopdate_files() -> dict[str, str]:
     files = {GETBZOPDATE_PATH: GETBZOPDATE_SRC}
     for i, dbio_id in enumerate(GETBZOPDATE_DBIO_IDS):
-        files[f"{dbio.DBIO_RESOURCE_ROOT}/{dbio_id}.xml"] = _synth_dbio_xml(f"TBL_{i}")
+        files[f"{dbio.DBIO_RESOURCE_ROOT}/{dbio.DBIO_FILENAME_PREFIX}{dbio_id}.xml"] = _synth_dbio_xml(f"TBL_{i}")
     return files
 
 
@@ -183,7 +184,7 @@ def test_extract_from_module_recursion_find_cycle_and_partial_success():
     files = {
         svc_path: svc_src,
         biz_path: biz_src,
-        f"{dbio.DBIO_RESOURCE_ROOT}/PFO_ABC_DS001.xml": _synth_dbio_xml("SVC_TBL"),
+        f"{dbio.DBIO_RESOURCE_ROOT}/{dbio.DBIO_FILENAME_PREFIX}PFO_ABC_DS001.xml": _synth_dbio_xml("SVC_TBL"),
         # PFO_XYZ_DS002.xml 없음(nested skip), BIZ_MISSING 소스도 없음(find 실패 → nested skip)
     }
     dirs = {COMPILE_ROOT: ["PCSP", "NCOM"]}  # find가 순회할 업무그룹 후보
@@ -502,9 +503,9 @@ def test_batch_extract_dbios_cross_item_dedup_preserves_order():
     files = {
         svc_a_path: svc_a_src,
         svc_b_path: svc_b_src,
-        f"{dbio.DBIO_RESOURCE_ROOT}/PFO_SHARED_DS001.xml": _synth_dbio_xml("SHARED_TBL"),
-        f"{dbio.DBIO_RESOURCE_ROOT}/PFO_ONLY_A_DS002.xml": _synth_dbio_xml("A_TBL"),
-        f"{dbio.DBIO_RESOURCE_ROOT}/PFO_ONLY_B_DS003.xml": _synth_dbio_xml("B_TBL"),
+        f"{dbio.DBIO_RESOURCE_ROOT}/{dbio.DBIO_FILENAME_PREFIX}PFO_SHARED_DS001.xml": _synth_dbio_xml("SHARED_TBL"),
+        f"{dbio.DBIO_RESOURCE_ROOT}/{dbio.DBIO_FILENAME_PREFIX}PFO_ONLY_A_DS002.xml": _synth_dbio_xml("A_TBL"),
+        f"{dbio.DBIO_RESOURCE_ROOT}/{dbio.DBIO_FILENAME_PREFIX}PFO_ONLY_B_DS003.xml": _synth_dbio_xml("B_TBL"),
     }
     _use_files(files)
 
