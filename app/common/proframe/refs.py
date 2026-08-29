@@ -1,4 +1,4 @@
-"""C 소스 텍스트 → 타입 포함 참조 스캔 (dbio_sql.py의 자매, table_extractor 전용).
+"""C 소스 텍스트 → 타입 포함 참조 스캔 (dbio_sql.py의 자매).
 
 service/batch/biz 모듈 C 소스 안에서 다른 모듈/DBIO를 참조하는 콜 매크로를 찾는다. 콜
 매크로 자체가 대상 타입을 알려주므로(`pfmDbio*`=dbio, `pfmDlCall`=biz,
@@ -16,6 +16,10 @@ batch만 예외: 전용 콜 매크로가 없다. 배치는 항상 고정된 biz 
 ProFrame 코드젠은 실행되지 않는 예시 코드를 `//`/`/* */`로 통째로 주석 처리해 남겨두는데
 그 안에도 콜 매크로 형태 그대로인 죽은 코드가 들어 있어(실물 SPCSP53619C.c 450번 줄 실증)
 정규식 매칭 전 `c_source.strip_comments`로 주석을 반드시 제거한다.
+
+table_extractor가 정방향(모듈 소스 → 그 모듈이 참조하는 것)에 먼저 쓰지만, impact_analysis의
+역방향(어떤 ID를 참조하는 후보 소스를 찾은 뒤, 정말 참조하는지 확정)도 같은 파싱이 필요해
+공용에 둔다.
 """
 from __future__ import annotations
 
@@ -23,7 +27,7 @@ import logging
 import re
 
 from app.common.parse.c_source import strip_comments
-from app.common.proframe import Module_Type
+from app.common.proframe.types import Module_Type
 
 logger = logging.getLogger("no_gada.table_extractor")
 
