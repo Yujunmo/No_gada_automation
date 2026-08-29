@@ -2,7 +2,7 @@
 
 "경로를 주면 파일 내용을 문자열로 돌려준다"는 한 가지 동작만 제공한다.
 `SourceReader` 인터페이스 뒤에 `SftpSourceReader`(실제 접속) 구현을 숨긴다. 개발/검증은
-로컬 Docker SFTP(`remote_ap_server/`, 127.0.0.1:2222)로, 단위 테스트는 인메모리 가짜 reader로
+로컬 Docker SFTP(`remote_ssh_server/`, 127.0.0.1:2222)로, 단위 테스트는 인메모리 가짜 reader로
 이 인터페이스를 만족시킨다. 특정 도구 지식이 없는 범용 인프라라 `app/common/`에 둔다(같은 범주: text.py).
 이용하는 도구가 `reader.read(path)`만 호출하므로 SFTP 접속 코드는 이 파일 한 곳에만 존재한다.
 """

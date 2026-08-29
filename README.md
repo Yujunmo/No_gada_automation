@@ -47,7 +47,7 @@ pytest tests/tools/test_migrate.py -k group   # 단일 파일/필터 예시
 **Table Extractor 수동 검증용 로컬 서버**(Docker) — 브라우저/`curl` 확인 시에만 필요, `pytest`엔 불필요:
 
 ```bash
-(cd remote_ap_server && docker compose up -d)      # SFTP    127.0.0.1:2222  testuser/testpass
+(cd remote_ssh_server && docker compose up -d --build)  # SSH+SFTP 127.0.0.1:2222  testuser/testpass
 pip install -e ".[oracle]"                          # oracledb 드라이버(기본 설치엔 없음)
 (cd remote_oracle_server && docker compose up -d)   # Oracle  127.0.0.1:1521  testuser/testpass, service_name=NOGADA (기본 대상)
 (cd remote_db_server && docker compose up -d)       # MySQL   127.0.0.1:3306  testuser/testpass, DB=nogada (대안 리허설)
@@ -140,7 +140,7 @@ POST /table-extractor/migrate-sql  {tables, from_link, to_link, keys} → {sql, 
 │   ├── excluded_refs.txt           # 재귀 참조 집계에서 항상 제외할 ID 목록(한 줄에 하나, # 주석)
 │   └── module_group_map.txt        # 재귀 중 참조 ID → 업무그룹 사전 매핑(find 폴백 가속용)
 ├── .env.example                    # NOGADA_* env 템플릿 (.env는 로컬 전용, python-dotenv가 자동 로드)
-├── remote_ap_server/                # 개발용 로컬 SFTP + 실물 DBIO/모듈 소스 픽스처, 127.0.0.1:2222
+├── remote_ssh_server/                # 개발용 로컬 SSH+SFTP + 실물 DBIO/모듈 소스 픽스처, 127.0.0.1:2222
 ├── remote_db_server/                # 개발용 로컬 MySQL(mysql:8.0), 127.0.0.1:3306, all_tables 시드
 ├── remote_oracle_server/            # 개발용 로컬 Oracle(gvenzl/oracle-free), 127.0.0.1:1521, all_tables 동일 시드(기본 대상)
 ├── pyproject.toml                  # deps: fastapi/uvicorn/sqlglot/paramiko/SQLAlchemy/PyMySQL/python-dotenv, optional: dev/oracle

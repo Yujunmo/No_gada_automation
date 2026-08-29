@@ -1,12 +1,11 @@
 # 테스트용 SSH + SFTP 원격 서버
 
-`remote_ap_server`(atmoz/sftp)의 **확장판**. SFTP 파일 읽기에 더해 **SSH 명령 실행(grep 등)**까지
-되는 로컬 Docker 서버다. Impact Analysis 1홉이 "테이블을 쓰는 DBIO 후보"를 원격 `grep`으로
-좁히는데, atmoz는 SFTP 서브시스템만 열고 셸 exec를 막아 이 경로를 실측할 수 없다. 일반
-openssh(alpine)는 하나의 sshd로 exec와 (internal-)sftp를 함께 제공하므로 이 이미지 하나로
-두 경로를 다 리허설한다.
+`table_extractor`의 원격 파일 가져오기(SFTP)와 Impact Analysis의 원격 grep(SSH 명령 실행)을
+검증하기 위한 **로컬 SSH+SFTP 서버**(Docker). 실제 회사 서버가 SFTP(SSH)고 exec(grep)도
+지원하므로 하나의 openssh(alpine) 이미지로 두 경로를 다 리허설한다(하나의 sshd가 exec와
+(internal-)sftp를 함께 제공).
 
-## 접속 정보 (remote_ap_server 와 동일)
+## 접속 정보
 
 | 항목 | 값 |
 |------|-----|
@@ -15,15 +14,24 @@ openssh(alpine)는 하나의 sshd로 exec와 (internal-)sftp를 함께 제공하
 | user | `testuser` |
 | password | `testpass` |
 
-앱은 절대경로 `/src/...`로 접근한다(`PROFRAME_ROOT="/src/truap01dap1/proframe/proframe5.0"`).
-그래서 `remote_ap_server/files`를 컨테이너의 **실제 `/src`**에 얹으면, SFTP `open("/src/...")`과
-exec `grep /src/...`이 **동일 경로**를 본다(atmoz의 chroot 트릭이 필요 없다).
+앱은 절대경로 `/truap01dap1/...`로 접근한다(`PROFRAME_ROOT="/truap01dap1/proframe/proframe5.0"`).
+`truap01dap1/`을 컨테이너의 **실제 `/truap01dap1`**에 얹으므로, SFTP `open("/truap01dap1/...")`과
+exec `grep /truap01dap1/...`이 **동일 경로**를 본다.
 
 ## 컨텐츠
 
-별도 픽스처를 두지 않는다 — `remote_ap_server/files`를 **볼륨으로 공유**한다(복사 아님, 단일
-원본 유지, 읽기 전용 마운트). 즉 소스 픽스처를 고칠 때는 `remote_ap_server/files/`만 편집하면
-양쪽 서버에 그대로 반영된다.
+`truap01dap1/` 아래가 서버에 그대로 노출된다(읽기 전용 마운트 — 조회 도구라 충분). 사내
+프로젝트 구조를 껍데기만 흉내 낸 픽스처다: 실제 소스는 없고 대부분 0바이트 파일 + 빈
+디렉토리, DBIO XML만 `table_extractor` 검증을 위해 실제 파싱 가능한 내용을 채워뒀다.
+
+```
+truap01dap1/proframe/proframe5.0/
+├── compile/<PROG>/src/{batch, module, serviceModule}/*.c   # 원본 C 소스
+└── release/dbio/xml/pfmDbio<ID>.xml                        # 배포 DBIO SQL 리소스(평면 구조)
+```
+
+소스 픽스처를 고치려면 `remote_ssh_server/truap01dap1/`을 직접 편집하면 된다(컨테이너와
+실시간 연동, 호스트 ↔ 컨테이너 어느 쪽에서 바꿔도 즉시 반영).
 
 ## 사용법
 
@@ -35,19 +43,19 @@ docker compose logs -f ssh     # 로그
 docker compose down            # 정지
 ```
 
-> ⚠️ **remote_ap_server 와 호스트 포트 2222 를 공유한다.** 이 서버가 sftp+ssh 를 모두 제공하는
-> 상위집합이므로 둘 중 **하나만** 띄운다. 이 서버를 쓰려면 `cd ../remote_ap_server && docker compose down`으로
-> atmoz 를 먼저 내릴 것. 앱 env(`NOGADA_SFTP_*`)는 바꿀 필요 없다(같은 host/port/user/pass).
+> **호스트 키 참고**: 컨테이너를 **recreate**(설정/이미지 변경 후 `up`)하면 SSH 호스트 키가
+> 새로 생성돼 클라이언트의 `known_hosts`와 충돌할 수 있다. 이때는 `ssh-keygen -R "[127.0.0.1]:2222"`.
+> 단순 `stop`/`start`나 `restart`로는 키가 유지된다.
 
 ## 수동 접속 확인
 
 ```bash
-# SFTP 읽기 (기존 경로)
+# SFTP 읽기
 sftp -P 2222 testuser@127.0.0.1        # 암호 testpass
 
-# SSH 명령 실행 (신규 경로 — grep 후보 필터)
+# SSH 명령 실행 (grep 후보 필터)
 ssh -p 2222 testuser@127.0.0.1 \
-  "grep -rlFi TRU_SRVC_BTN_LB /src/truap01dap1/proframe/proframe5.0/release/dbio/xml"
+  "grep -rlFi TRU_SRVC_BTN_LB /truap01dap1/proframe/proframe5.0/release/dbio/xml"
 ```
 
 앱 코드(`app/common/io/ssh.py`)로 검증하려면 `SshCommandRunner`/`grep_files`와

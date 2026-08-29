@@ -26,8 +26,8 @@ cp .env.example .env
 # 개발 서버 (http://localhost:8000)
 uvicorn app.main:app --reload
 
-# Table Extractor 수동 검증용 로컬 SFTP (회사 서버 대역, 127.0.0.1:2222 testuser/testpass)
-(cd remote_ap_server && docker compose up -d)     # 정지: docker compose down
+# Table Extractor/Impact Analysis 수동 검증용 로컬 SSH+SFTP (회사 서버 대역, 127.0.0.1:2222 testuser/testpass)
+(cd remote_ssh_server && docker compose up -d --build)  # 정지: docker compose down
 
 # 데이터 조회용 로컬 Oracle (기본값 대상 — 회사 실서버와 방언 일치, 127.0.0.1:1521 testuser/testpass, service_name=NOGADA)
 pip install -e ".[oracle]"                         # oracledb 드라이버 (기본 설치에는 없음)
@@ -84,7 +84,7 @@ pytest -k dual
 - `parse/c_source.py`의 `strip_comments(text) -> (cleaned, removed_count)`: C 소스에서 `//` 줄 주석 / `/* */` 블록 주석 제거(`removed`는 **제거한 주석 개수**, 목록이 아님). 문자열·문자 리터럴 내부의 `//` `/*`는 상태 기계로 보존, 주석 자리에는 개행을 남겨 원본 줄 번호 유지. `table_extractor.refs`가 콜 매크로 정규식 매칭 전에 사용(주석 처리된 죽은 코드에 실제 콜 매크로 형태가 남아 있어 오탐 방지).
 
 **`io/`** — 순수 I/O 어댑터 (프로토콜 교체 지점, 테스트에서 fake로 대체):
-- `io/sftp.py`의 `SourceReader`(Protocol) / `SftpSourceReader` / `SourceNotFound`·`SourceError` / `default_reader()`: 원격 소스 I/O 인프라(경로→내용 문자열). 회사 서버가 SFTP라 paramiko 기반. `default_reader()`는 env(`NOGADA_SFTP_HOST/_PORT/_USER/_PASS/_BASE`, 기본값 `remote_ap_server` 127.0.0.1:2222/testuser)에서 `SftpSourceReader`를 조립하는 팩토리. 라우터에 `Depends(default_reader)`로 주입 → 테스트에서 `app.dependency_overrides`로 인메모리 fake reader 교체 가능. 바이트→문자열 디코딩 인코딩은 `NOGADA_SOURCE_ENCODING`(기본 `utf-8`)로 지정 — 회사 서버가 UTF-8이 아니면(EUC-KR/CP949 등) 반입 시 이 값만 바꾸면 된다. `io/ssh.py`의 `default_command_runner()`(SSH 명령 실행 인프라, 같은 회사 서버·같은 `NOGADA_SFTP_*` 접속정보 공유)도 이 env를 그대로 쓴다. 이 프로그램이 로컬에 읽고 쓰는 텍스트 파일(`excludes.py`의 `config/excluded_refs.txt`·`excluded_tables.txt`, `module_source.py`의 `config/module_group_map.txt`, `main.py`의 `logs/no_gada.log`)도 같은 env를 따른다 — 회사 로컬 환경(텍스트 편집기 등)에서 이 파일들을 직접 열어볼 수 있어 인코딩을 일관되게 맞춰둔다.
+- `io/sftp.py`의 `SourceReader`(Protocol) / `SftpSourceReader` / `SourceNotFound`·`SourceError` / `default_reader()`: 원격 소스 I/O 인프라(경로→내용 문자열). 회사 서버가 SFTP라 paramiko 기반. `default_reader()`는 env(`NOGADA_SFTP_HOST/_PORT/_USER/_PASS/_BASE`, 기본값 `remote_ssh_server` 127.0.0.1:2222/testuser)에서 `SftpSourceReader`를 조립하는 팩토리. 라우터에 `Depends(default_reader)`로 주입 → 테스트에서 `app.dependency_overrides`로 인메모리 fake reader 교체 가능. 바이트→문자열 디코딩 인코딩은 `NOGADA_SOURCE_ENCODING`(기본 `utf-8`)로 지정 — 회사 서버가 UTF-8이 아니면(EUC-KR/CP949 등) 반입 시 이 값만 바꾸면 된다. `io/ssh.py`의 `default_command_runner()`(SSH 명령 실행 인프라, 같은 회사 서버·같은 `NOGADA_SFTP_*` 접속정보 공유)도 이 env를 그대로 쓴다. 이 프로그램이 로컬에 읽고 쓰는 텍스트 파일(`excludes.py`의 `config/excluded_refs.txt`·`excluded_tables.txt`, `module_source.py`의 `config/module_group_map.txt`, `main.py`의 `logs/no_gada.log`)도 같은 env를 따른다 — 회사 로컬 환경(텍스트 편집기 등)에서 이 파일들을 직접 열어볼 수 있어 인코딩을 일관되게 맞춰둔다.
 - `io/db.py`의 `DbClient`(Protocol) / `SqlAlchemyDbClient` / `DbError`·`QueryError` / `default_db()`: 원격 DB I/O 인프라(SQL→결과 행 `list[dict]`). `io/sftp.py`와 쌍둥이 구조. **SQLAlchemy `Engine`(Core만 사용, ORM 아님) 기반이라 DB 종류가 바뀌면 `NOGADA_DB_DIALECT`(URL scheme) env만 바꾸면 되고 호출부 SQL은 그대로 유지**된다 — 방언별 paramstyle 차이를 SQLAlchemy가 흡수하므로 호출부는 항상 named bind(`:col`)로 SQL을 쓴다. `params`가 dict이고 값이 list/tuple이면 `bindparam(expanding=True)`로 `IN` 절을 자동 확장한다. `query`마다 접속/해제하는 상태 없는 모델(Engine 자체와 connection pool은 재사용), 결과는 dict 행 리스트, 읽기 전용(커밋 안 함). 접속 실패는 `DbError`, SQL 실행 실패는 `QueryError`. 라우터에 `Depends(default_db)`로 주입 → 테스트는 fake client로 교체. 소비처: `db_schema.fetch_pk_columns`(→ `table_extractor`의 `/pks`·`/migrate-sql`).
   - **기본값은 Oracle**(`_build_url_from_env()`): `NOGADA_DB_HOST`=127.0.0.1, `_PORT`=1521, `_USER`=testuser, `_PASS`=testpass, `_NAME`=NOGADA, `_DIALECT`=`oracle+oracledb` — 실제 반입 대상과 방언을 맞춘 기본값(`remote_oracle_server/`). MySQL 리허설(`remote_db_server/`)을 쓰려면 이 6개를 그쪽 값(host 동일/port 3306/name `nogada`/dialect `mysql+pymysql`)으로 바꾼다.
   - **dialect가 `oracle`로 시작하면 `NOGADA_DB_NAME`을 `service_name` 쿼리 파라미터로** 접속 URL에 넣는다(그 외 dialect는 `database=`). Oracle은 SID가 아니라 PDB `service_name`으로 접속해야 하며, `database=`로 넘기면 "SID ... is not registered with the listener"로 접속 실패 — `remote_oracle_server/`(gvenzl/oracle-free)로 실측 확인됨.
@@ -221,7 +221,7 @@ config/
   excluded_tables.txt         # NOGADA_EXCLUDED_TABLES_PATH 기본 경로(추출 결과 테이블 제외, 설정 팝업 "테이블 추출 예외처리" 탭이 저장, 최초 저장 전엔 파일 없음)
   module_group_map.txt        # NOGADA_MODULE_GROUP_MAP_PATH 기본 경로
 .env.example                  # NOGADA_* env 템플릿 (python-dotenv가 실제 .env를 자동 로드)
-remote_ap_server/             # 개발용 로컬 SFTP + 실물 DBIO/모듈 소스 픽스처, 127.0.0.1:2222
+remote_ssh_server/             # 개발용 로컬 SSH+SFTP + 실물 DBIO/모듈 소스 픽스처, 127.0.0.1:2222
 remote_db_server/             # 개발용 로컬 MySQL(mysql:8.0), 127.0.0.1:3306, all_tables 시드
 remote_oracle_server/         # 개발용 로컬 Oracle(gvenzl/oracle-free), 127.0.0.1:1521, all_tables 동일 시드(기본 대상)
 pyproject.toml                # name=no-gada, deps: fastapi/uvicorn/sqlglot/paramiko/SQLAlchemy/PyMySQL/python-dotenv, optional: dev/oracle(oracledb)

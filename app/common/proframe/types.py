@@ -14,4 +14,4 @@ ResourceGroup = Literal["PCSP", "PCSH", "NCOM", "NCSP", "PCOM", "PPFR", "RLGR"]
 
 # 서버/버전 고정 ProFrame 설치 루트. dbio.py(release/dbio/xml)·module_src.py(compile)가
 # 각자의 하위 루트를 여기서 조합한다 — 서버 이전/버전 변경 시 한 곳만 고치면 되도록.
-PROFRAME_ROOT = "/src/truap01dap1/proframe/proframe5.0"
+PROFRAME_ROOT = "/truap01dap1/proframe/proframe5.0"

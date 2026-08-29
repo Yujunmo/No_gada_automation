@@ -1,23 +1,20 @@
 # 테스트용 SSH+SFTP 원격 서버 (개발/검증 전용)
 #
-# remote_ap_server(atmoz/sftp)의 확장판. SFTP 파일 읽기에 더해 SSH 명령 실행(grep 등)까지
-# 되므로, Impact Analysis의 원격 grep 경로를 로컬에서 실측할 수 있다.
+# table_extractor의 원격 파일 가져오기(SFTP) + Impact Analysis의 원격 grep(SSH 명령 실행)을
+# 로컬 Docker 하나로 리허설한다. 실제 회사 서버 프로토콜이 SFTP(SSH)고 exec(grep)도 되므로
+# 이 이미지 하나로 두 경로를 다 검증할 수 있다(과거엔 SFTP 전용 atmoz/sftp 이미지를 별도
+# 서버로 뒀었지만, exec가 안 돼 grep 경로를 실측할 수 없어 이 서버로 통합했다).
 #
-# 컨텐츠는 remote_ap_server/files 를 그대로 공유한다(복사 아님, 볼륨 마운트로 단일 원본 유지).
-# 앱이 절대경로 /src/... 로 접근하므로(PROFRAME_ROOT="/src/truap01dap1/..."), files 를
-# 컨테이너 실제 /src 에 얹으면 SFTP open 과 exec grep 이 동일 경로를 본다(atmoz의 chroot
-# 트릭 없이도 성립).
+# truap01dap1/(픽스처)을 컨테이너 실제 절대경로 /truap01dap1 에 그대로 얹으므로, 앱이 쓰는
+# PROFRAME_ROOT="/truap01dap1/..."와 SFTP open·exec grep이 전부 동일 경로를 본다.
 #
 #   기동: docker compose up -d --build   (127.0.0.1:2222, testuser/testpass)
 #   정지: docker compose down
-#
-# ⚠️ remote_ap_server 와 호스트 포트 2222 를 공유한다 — 이 서버가 sftp+ssh 를 모두 제공해
-#    상위집합이므로, 둘 중 하나만 띄운다(이 서버를 쓰려면 remote_ap_server 는 내려둘 것).
 services:
   ssh:
     build: .
     ports:
       - "2222:22"                              # 컨테이너 22 → 호스트 2222 (앱 기본 NOGADA_SFTP_PORT)
     volumes:
-      - ../remote_ap_server/files:/src:ro      # ap 서버 컨텐츠 공유 → 실제 /src 로 노출(읽기 전용, 조회 도구라 충분)
+      - ./truap01dap1:/truap01dap1:ro           # 픽스처(읽기 전용, 조회 도구라 충분) → 실제 /truap01dap1 로 노출
     restart: unless-stopped
