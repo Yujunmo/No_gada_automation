@@ -11,9 +11,9 @@ from app.common.proframe import Module_Type, ResourceGroup
 from app.common.proframe import db_schema
 from app.common.proframe.dbio import UnknownSqlType, dbio_referenced_tables
 from app.common.proframe.module_source import load_group_map, read_module_source
+from app.common.proframe.refs import scan_module_refs
 from app.tools.table_extractor import migrate
 from app.tools.table_extractor.excludes import load_excluded_refs, load_excluded_tables
-from app.tools.table_extractor.refs import scan_module_refs
 
 logger = logging.getLogger("no_gada.table_extractor")
 
