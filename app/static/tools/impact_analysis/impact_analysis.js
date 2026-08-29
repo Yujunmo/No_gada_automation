@@ -68,8 +68,9 @@
         table: '테이블명을 입력하세요 (예: PFO_FUND_BS)',
         biz: '비즈모듈명을 입력하세요 (예: MZPFM_FundInfoSave)',
     };
-    // Table Extractor와 동일한 업무그룹 코드
-    var PROG_OPTIONS = ['PCSP', 'PCSH', 'NCOM', 'NCSP', 'PCOM', 'PPFR', 'RLGR'];
+    // 백엔드 ResourceGroup(app/common/proframe/types.py)이 단일 소스 — 페이지 로드 시
+    // /meta/resource-groups로 받아온다(table_extractor.js와 동일한 패턴).
+    var PROG_OPTIONS = [];
 
     // 업무그룹 필터: 선택 안 함(빈 Set) = 전체 대상. 다음 라운드의 DBIO→호출모듈 조회가
     // getSelectedGroups()를 그대로 쿼리 파라미터로 넘겨 grep 범위를 좁히는 데 쓴다.
@@ -139,8 +140,15 @@
         return Array.from(selectedGroups);
     }
 
-    renderGroupFilterPanel();
-    updateGroupFilterLabel();
+    // PROG_OPTIONS가 도착하기 전엔 패널이 비어 보이므로, fetch가 끝난 뒤에 처음 렌더한다.
+    fetch('meta/resource-groups')
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            PROG_OPTIONS = data.resource_groups;
+            renderGroupFilterPanel();
+            updateGroupFilterLabel();
+        })
+        .catch(function () { /* 실패해도 조용히 빈 목록 유지 — 필터가 비어 보일 뿐 검색 자체는 안 죽음 */ });
 
     groupFilterBtn.addEventListener('click', function (e) {
         e.stopPropagation();

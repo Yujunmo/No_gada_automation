@@ -106,8 +106,14 @@
         updateProgVisibility();
     });
 
-    // 업무그룹 콤보박스: 입력한 문자열로 목록을 필터링하는 검색형 드롭다운
-    var PROG_OPTIONS = ['PCSP', 'PCSH', 'NCOM', 'NCSP', 'PCOM', 'PPFR', 'RLGR'];
+    // 업무그룹 콤보박스: 입력한 문자열로 목록을 필터링하는 검색형 드롭다운.
+    // 백엔드 ResourceGroup(app/common/proframe/types.py)이 단일 소스 — 페이지 로드 시
+    // /meta/resource-groups로 받아온다(둘 다 lazy 사용처라 도착 전에 쓰일 일 없음).
+    var PROG_OPTIONS = [];
+    fetch('meta/resource-groups')
+        .then(function (res) { return res.json(); })
+        .then(function (data) { PROG_OPTIONS = data.resource_groups; })
+        .catch(function () { /* 실패해도 조용히 빈 목록 유지 — 콤보가 비어 보일 뿐 기능은 안 죽음 */ });
     // 추출 결과 접두사 필터 체크박스(테이블명 접두사)
     var PREFIXES = ['TRU', 'PFO', 'PTN', 'RPT'];
     var progInput = container.querySelector('#te-prog');
