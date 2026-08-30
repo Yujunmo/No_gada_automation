@@ -25,9 +25,10 @@ from __future__ import annotations
 
 import logging
 import re
+from typing import get_args
 
 from app.common.parse.c_source import strip_comments
-from app.common.proframe.types import Module_Type
+from app.common.proframe.types import Module_Type, ResourceGroup
 
 logger = logging.getLogger("no_gada.table_extractor")
 
@@ -38,7 +39,9 @@ _BIZ_RE = re.compile(r'pfmDlCall\(\s*"([A-Za-z0-9_]+)"')
 # pfmServiceModuleCall(&in, &out, &linkHeader, sizeof(ID_IN), ...) — 구조체명에서 ID 추출.
 _SERVICE_RE = re.compile(r'pfmServiceModuleCall\([\s\S]{0,300}?sizeof\(\s*([A-Za-z]\w*)_IN\b')
 # "B<업무그룹4자리><suffix>" — 콜 매크로 인자가 아니라 파일 전체 리터럴 스캔.
-_BATCH_RE = re.compile(r'"(B(?:PCSP|PCSH|NCOM|NCSP|PCOM|PPFR|RLGR)[A-Z0-9]+)"')
+# 업무그룹 7종은 types.py의 ResourceGroup이 유일한 소스 — 여기서 하드코딩하지 않고 끌어온다.
+_RESOURCE_GROUP_ALT = "|".join(get_args(ResourceGroup))
+_BATCH_RE = re.compile(rf'"(B(?:{_RESOURCE_GROUP_ALT})[A-Z0-9]+)"')
 
 _PATTERNS: tuple[tuple[Module_Type, "re.Pattern[str]"], ...] = (
     ("dbio", _DBIO_RE),
