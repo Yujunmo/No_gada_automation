@@ -1,20 +1,30 @@
+#page-sql-bench {
+    flex: 1;
+    min-height: 0;
+}
+
 .workspace {
     display: grid;
     grid-template-columns: 3fr 1fr;
     gap: 24px;
-    align-items: start;
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
 }
 
 .input-card {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    min-height: 0;
 }
 
 .input-group {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    flex: 1;
+    min-height: 0;
 }
 
 .input-header {
@@ -32,6 +42,13 @@
 .input-limit {
     font-size: 12px;
     color: var(--text-muted);
+}
+
+#sql-bench-input {
+    flex: 1;
+    min-height: 200px;
+    height: auto;
+    resize: none;
 }
 
 textarea {
@@ -63,6 +80,7 @@ textarea::placeholder {
 .btn-container {
     display: flex;
     justify-content: flex-end;
+    gap: 8px;
 }
 
 .result-card {
@@ -105,6 +123,55 @@ textarea::placeholder {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 10px;
     animation: fadeIn 0.3s ease-out;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    align-content: start;
+}
+
+.table-list-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 24px 0;
+}
+
+.result-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: var(--transition-default);
+}
+
+.result-filter:focus-within {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(204, 107, 73, 0.12);
+}
+
+.result-filter svg {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.result-filter input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text-main);
+    font-size: 13px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    padding: 2px 0;
+}
+
+.result-filter input::placeholder {
+    color: #b0aba4;
 }
 
 .table-item {
@@ -130,14 +197,71 @@ textarea::placeholder {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    padding-right: 8px;
+    flex: 1;
+}
+
+.sb-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.sb-del-btn:hover {
+    color: var(--error-text);
+    background-color: var(--error-bg);
+}
+
+.result-dblink {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.result-dblink input {
+    flex: 1;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    outline: none;
+    background: #ffffff;
+    color: var(--text-main);
+    font-size: 13px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    padding: 8px 12px;
+    transition: var(--transition-default);
+}
+
+.result-dblink input::placeholder {
+    color: #b0aba4;
+}
+
+.result-dblink input:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(204, 107, 73, 0.12);
+}
+
+.result-dblink button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    white-space: nowrap;
 }
 
 @media (max-width: 900px) {
     .workspace {
         grid-template-columns: 1fr;
+        flex: initial;
+        min-height: auto;
     }
     .result-card {
         min-height: auto;
+    }
+    #sql-bench-input {
+        flex: initial;
+        height: 300px;
+        resize: vertical;
     }
 }

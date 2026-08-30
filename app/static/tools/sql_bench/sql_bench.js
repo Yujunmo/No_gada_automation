@@ -4,22 +4,9 @@
 
     container.innerHTML = `
         <div class="header">
-            <div class="badge">SQL 파서</div>
+            <div class="badge">SQL 파싱 도구</div>
             <h1>SQL Bench</h1>
-            <p>단일 SQL 쿼리 문장을 입력하면 참조하고 있는 모든 물리 테이블의 이름을 추출합니다.</p>
-        </div>
-
-        <div class="notice-box">
-            <div class="notice-title">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="16" height="16">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                </svg>
-                <span>사용 전 주의사항</span>
-            </div>
-            <ul class="notice-list">
-                <li>DB 링크가 제거된 순수 테이블명만 중복 없이 추출됩니다. </li>
-                <li>복수의 sql을 담을시 ;로 구분해주세요. </li>
-            </ul>
+            <p>Oracle SQL 자동 가공 도구. SQL을 입력하면 다양한 방식으로 가공합니다.</p>
         </div>
 
         <div class="workspace">
@@ -32,6 +19,19 @@
                     <textarea id="sql-bench-input" placeholder="이곳에 Oracle SQL 쿼리를 입력하세요... (예: SELECT * FROM EMP e JOIN DEPT d ON e.id = d.id)"></textarea>
                 </div>
                 <div class="btn-container">
+                    <button id="sql-bench-bind-toggle" class="btn-secondary">
+                        <span>:치환</span>
+                    </button>
+                    <button id="sql-bench-case-toggle" class="btn-secondary">
+                        <span>대문자 변환</span>
+                    </button>
+                    <button id="sql-bench-strip-link" class="btn-secondary">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="16" height="16">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.181 8.68a4.503 4.503 0 011.903 6.405m-9.768-2.782L3.56 14.06a4.5 4.5 0 006.364 6.365l3-3a4.5 4.5 0 00.627-5.402m4.62-9.755a4.5 4.5 0 00-6.366 6.366l.415.415M18.818 15.32A4.503 4.503 0 0117 21" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18" />
+                        </svg>
+                        <span>링크 제거</span>
+                    </button>
                     <button id="sql-bench-submit">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="16" height="16">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -55,6 +55,30 @@
     var sqlInput = container.querySelector('#sql-bench-input');
     var submitBtn = container.querySelector('#sql-bench-submit');
     var resultEl = container.querySelector('#sql-bench-result');
+
+    var bindToggleBtn = container.querySelector('#sql-bench-bind-toggle');
+    bindToggleBtn.addEventListener('click', function () {
+        var isColon = bindToggleBtn.querySelector('span').textContent === ':치환';
+        sqlInput.value = isColon
+            ? sqlInput.value.replace(/:[A-Za-z_][A-Za-z0-9_]*/g, function (m) { return '&' + m.slice(1); })
+            : sqlInput.value.replace(/&[A-Za-z_][A-Za-z0-9_]*/g, function (m) { return ':' + m.slice(1); });
+        bindToggleBtn.querySelector('span').textContent = isColon ? '&치환' : ':치환';
+    });
+
+    var caseToggleBtn = container.querySelector('#sql-bench-case-toggle');
+    caseToggleBtn.addEventListener('click', function () {
+        var isUpper = caseToggleBtn.querySelector('span').textContent === '대문자 변환';
+        sqlInput.value = isUpper ? sqlInput.value.toUpperCase() : sqlInput.value.toLowerCase();
+        caseToggleBtn.querySelector('span').textContent = isUpper ? '소문자 변환' : '대문자 변환';
+    });
+
+    container.querySelector('#sql-bench-strip-link').addEventListener('click', function () {
+        var before = sqlInput.value;
+        var after = before.replace(/ *@[A-Za-z0-9_$#.]+/g, '');
+        if (before === after) { App.showToast('제거할 DB 링크가 없습니다.'); return; }
+        sqlInput.value = after;
+        App.showToast('DB 링크가 제거되었습니다.');
+    });
 
     submitBtn.addEventListener('click', async function () {
         resultEl.classList.add('empty');
@@ -107,26 +131,12 @@
                 return;
             }
 
-            var items = data.tables.map(function (t) {
-                return `
-                    <div class="table-item">
-                        <span class="table-name" title="${t}">${t}</span>
-                        <button class="copy-btn" title="복사" data-table="${t}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke-width="2"></rect>
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-width="2"></path>
-                            </svg>
-                        </button>
-                    </div>
-                `;
-            }).join('');
-
             resultEl.classList.remove('empty');
             resultEl.innerHTML = `
                 <div class="result-header">
                     <div class="result-title">
                         <span>추출 결과</span>
-                        <span class="count-badge">${data.tables.length}개</span>
+                        <span class="count-badge" id="sql-bench-count"></span>
                     </div>
                     <button class="btn-secondary" id="sql-bench-copy-all" style="display: flex; align-items: center; gap: 6px;">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
@@ -136,20 +146,100 @@
                         <span>전체 복사</span>
                     </button>
                 </div>
-                <div class="table-list">
-                    ${items}
+                <div class="result-filter">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="14" height="14">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                    </svg>
+                    <input type="text" id="sql-bench-filter" placeholder="테이블 검색..." autocomplete="off">
+                </div>
+                <div class="table-list" id="sql-bench-list"></div>
+                <div class="result-dblink">
+                    <input type="text" id="sql-bench-dblink" value="@dl_patru_Trups" autocomplete="off" spellcheck="false">
+                    <button id="sql-bench-link-apply">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="14" height="14">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                        </svg>
+                        <span>링크 붙이기</span>
+                    </button>
                 </div>
             `;
 
+            var listEl = resultEl.querySelector('#sql-bench-list');
+            var countEl = resultEl.querySelector('#sql-bench-count');
+            var filterEl = resultEl.querySelector('#sql-bench-filter');
+            var tables = data.tables.slice();
+
+            function renderList() {
+                var q = filterEl.value.trim().toUpperCase();
+                var filtered = q ? tables.filter(function (t) { return t.indexOf(q) !== -1; }) : tables;
+
+                countEl.textContent = q
+                    ? filtered.length + ' / ' + tables.length + '개'
+                    : tables.length + '개';
+
+                if (filtered.length === 0) {
+                    listEl.innerHTML = '<div class="table-list-empty">일치하는 테이블이 없습니다.</div>';
+                    return;
+                }
+
+                listEl.innerHTML = filtered.map(function (t) {
+                    return `
+                        <div class="table-item">
+                            <span class="table-name" title="${t}">${t}</span>
+                            <span class="sb-item-actions">
+                                <button class="copy-btn" title="복사" data-table="${t}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke-width="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-width="2"></path>
+                                    </svg>
+                                </button>
+                                <button class="copy-btn sb-del-btn" title="삭제" data-table="${t}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                    </svg>
+                                </button>
+                            </span>
+                        </div>
+                    `;
+                }).join('');
+
+                listEl.querySelectorAll('.copy-btn:not(.sb-del-btn)').forEach(function (btn) {
+                    btn.addEventListener('click', function (e) {
+                        var tableName = e.currentTarget.getAttribute('data-table');
+                        App.copyToClipboard(tableName, '"' + tableName + '" 테이블명이 복사되었습니다.');
+                    });
+                });
+
+                listEl.querySelectorAll('.sb-del-btn').forEach(function (btn) {
+                    btn.addEventListener('click', function (e) {
+                        var name = e.currentTarget.getAttribute('data-table');
+                        var idx = tables.indexOf(name);
+                        if (idx !== -1) tables.splice(idx, 1);
+                        renderList();
+                        App.showToast('"' + name + '" 삭제됨');
+                    });
+                });
+            }
+
+            renderList();
+            filterEl.addEventListener('input', renderList);
+
             resultEl.querySelector('#sql-bench-copy-all').addEventListener('click', function () {
-                App.copyToClipboard(data.tables.join(', '), '모든 테이블명이 쉼표로 구분되어 복사되었습니다.');
+                App.copyToClipboard(tables.join(', '), '모든 테이블명이 쉼표로 구분되어 복사되었습니다.');
             });
 
-            resultEl.querySelectorAll('.copy-btn').forEach(function (btn) {
-                btn.addEventListener('click', function (e) {
-                    var tableName = e.currentTarget.getAttribute('data-table');
-                    App.copyToClipboard(tableName, '"' + tableName + '" 테이블명이 복사되었습니다.');
+            resultEl.querySelector('#sql-bench-link-apply').addEventListener('click', function () {
+                var link = resultEl.querySelector('#sql-bench-dblink').value.trim();
+                if (!link) { App.showToast('DB 링크를 입력해주세요.'); return; }
+                if (link.startsWith('@')) link = link.slice(1).trim();
+
+                var sql = sqlInput.value;
+                tables.forEach(function (t) {
+                    var re = new RegExp('\\b' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+                    sql = sql.replace(re, function (match) { return match + ' @' + link; });
                 });
+                sqlInput.value = sql;
+                App.showToast('DB 링크가 붙여졌습니다.');
             });
 
         } catch (e) {
