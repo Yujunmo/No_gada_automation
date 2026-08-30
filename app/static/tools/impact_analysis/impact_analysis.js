@@ -4,7 +4,7 @@
 
     container.innerHTML = `
         <div class="header">
-            <div class="badge">영향도 분석</div>
+            <div class="badge">영향도 분석 도구</div>
             <h1>Impact Analysis</h1>
             <p>테이블명 또는 비즈모듈명을 입력하면, 테이블은 그 테이블을 참조하는 DBIO를, 비즈모듈은 곧바로 그 모듈을 찾습니다.<br>DBIO·비즈모듈을 펼치면 연결된 비즈·서비스·배치 모듈을 조회하고, 비즈모듈은 다시 펼쳐 그 비즈를 부르는 상위 모듈을 계속 따라갈 수 있습니다(서비스·배치는 항상 최상위).</p>
         </div>
