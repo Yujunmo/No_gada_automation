@@ -62,7 +62,7 @@
         biz: '비즈모듈명을 입력하세요 (예: MZPFM_FundInfoSave)',
     };
     // 백엔드 ResourceGroup(app/common/proframe/types.py)이 단일 소스 — 페이지 로드 시
-    // /meta/resource-groups로 받아온다(table_extractor.js와 동일한 패턴).
+    // /meta/resource-groups로 받아온다(data_migration.js와 동일한 패턴).
     var PROG_OPTIONS = [];
 
     // 업무그룹 필터: 선택 안 함(빈 Set) = 전체 대상. 다음 라운드의 DBIO→호출모듈 조회가

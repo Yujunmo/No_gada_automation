@@ -12,10 +12,10 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from app.tools.data_migration.router import router as data_migration_router
 from app.tools.impact_analysis.router import router as impact_analysis_router
 from app.tools.meta.router import router as meta_router
 from app.tools.sql_bench.router import router as sql_bench_router
-from app.tools.table_extractor.router import router as table_extractor_router
 
 # 콘솔 + 회전 파일 양쪽에 로그 기록 (logs/no_gada.log, 5MB x 5개 보관)
 LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
@@ -45,7 +45,7 @@ logging.getLogger("no_gada").setLevel(logging.DEBUG)
 app = FastAPI(title="No_Gada")
 
 app.include_router(sql_bench_router)
-app.include_router(table_extractor_router)
+app.include_router(data_migration_router)
 app.include_router(impact_analysis_router)
 app.include_router(meta_router)
 

@@ -1,6 +1,6 @@
 """ProFrame ID 체계 공용 타입 + 환경 공용 경로.
 
-module_type(DBIO/Service/Batch/Biz)·resource_group(업무그룹)는 table_extractor에서 먼저 쓰이지만
+module_type(DBIO/Service/Batch/Biz)·resource_group(업무그룹)는 data_migration에서 먼저 쓰이지만
 ProFrame ID 자체의 분류 체계라 다른 툴(예: 향후 Migration Builder)에서도 재사용될 값이다.
 """
 from __future__ import annotations

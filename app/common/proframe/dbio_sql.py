@@ -10,7 +10,7 @@ import logging
 import re
 import xml.etree.ElementTree as ET
 
-logger = logging.getLogger("no_gada.table_extractor")
+logger = logging.getLogger("no_gada.proframe")
 
 _SQL_STRING_BLOCK_RE = re.compile(r"<sqlString[^>]*>(.*?)</sqlString>", re.DOTALL)
 _ENTITIES = {"&lt;": "<", "&gt;": ">", "&amp;": "&", "&quot;": '"', "&apos;": "'"}

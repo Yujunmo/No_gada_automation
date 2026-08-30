@@ -75,7 +75,7 @@ pip install -e ".[oracle]"
 # 위 NOGADA_DB_* env를 export한 상태에서
 uvicorn app.main:app --reload
 
-curl -X POST localhost:8000/table-extractor/pks \
+curl -X POST localhost:8000/data-migration/pks \
   -H "Content-Type: application/json" \
   -d '{"tables":["PFO_STCK_MA"]}'
 # → remote_db_server(MySQL)로 같은 요청했을 때와 동일한 PK 컬럼이 반환되어야 정상

@@ -1,6 +1,6 @@
 # 테스트용 SSH + SFTP 원격 서버
 
-`table_extractor`의 원격 파일 가져오기(SFTP)와 Impact Analysis의 원격 grep(SSH 명령 실행)을
+`data_migration`의 원격 파일 가져오기(SFTP)와 Impact Analysis의 원격 grep(SSH 명령 실행)을
 검증하기 위한 **로컬 SSH+SFTP 서버**(Docker). 실제 회사 서버가 SFTP(SSH)고 exec(grep)도
 지원하므로 하나의 openssh(alpine) 이미지로 두 경로를 다 리허설한다(하나의 sshd가 exec와
 (internal-)sftp를 함께 제공).
@@ -22,7 +22,7 @@ exec `grep /truap01dap1/...`이 **동일 경로**를 본다.
 
 `truap01dap1/` 아래가 서버에 그대로 노출된다(읽기 전용 마운트 — 조회 도구라 충분). 사내
 프로젝트 구조를 껍데기만 흉내 낸 픽스처다: 실제 소스는 없고 대부분 0바이트 파일 + 빈
-디렉토리, DBIO XML만 `table_extractor` 검증을 위해 실제 파싱 가능한 내용을 채워뒀다.
+디렉토리, DBIO XML만 `data_migration` 검증을 위해 실제 파싱 가능한 내용을 채워뒀다.
 
 ```
 truap01dap1/proframe/proframe5.0/

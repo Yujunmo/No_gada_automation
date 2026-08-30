@@ -1,22 +1,22 @@
-/* Table Extractor (DBIO/서비스 ID → 원격 소스 스캔) 전용 스타일 */
+/* Data Migration (DBIO/서비스 ID → 원격 소스 스캔) 전용 스타일 */
 
 /* --- 섹션 간 간격 조정 (이 툴에만 스코프) ---
    공용 .container는 flex column + gap 24. 여기에 .header margin-bottom(8),
-   .extractor-controls margin-top(16), .extractor-workspace margin-top(12)이 더해져
+   .dm-controls margin-top(16), .dm-workspace margin-top(12)이 더해져
    원래 간격이 헤더↔컨트롤=48, 컨트롤↔워크스페이스=36 이었다. 공용값(container gap,
    header margin)은 다른 툴에도 쓰이므로, 이 툴에 한해 gap을 18로 낮추고 마진을 재조정해
    각 간격을 절반으로 만든다:
      헤더 ↔ 컨트롤        = gap18 + 컨트롤 margin-top 6      = 24  (기존 48의 절반)
      컨트롤 ↔ 워크스페이스 = gap18 + 워크스페이스 margin-top 0 = 18  (기존 36의 절반) */
-#page-table-extractor.container {
+#page-data-migration.container {
     gap: 18px;
 }
 
-#page-table-extractor .header {
+#page-data-migration .header {
     margin-bottom: 0;
 }
 
-.extractor-controls {
+.dm-controls {
     display: flex;
     gap: 12px;
     align-items: center;
@@ -24,13 +24,13 @@
     margin-top: 6px;
 }
 
-.extractor-controls #te-id-input {
+.dm-controls #dm-id-input {
     flex: 1;
     min-width: 200px;
 }
 
-.extractor-controls select,
-.extractor-controls input[type="text"] {
+.dm-controls select,
+.dm-controls input[type="text"] {
     font-family: inherit;
     font-size: 14px;
     height: 42px;
@@ -43,23 +43,23 @@
     transition: var(--transition-default);
 }
 
-.extractor-controls select {
+.dm-controls select {
     cursor: pointer;
 }
 
-.extractor-controls select:focus,
-.extractor-controls input[type="text"]:focus {
+.dm-controls select:focus,
+.dm-controls input[type="text"]:focus {
     outline: none;
     border-color: var(--border-focus);
     box-shadow: 0 0 0 3px rgba(204, 107, 73, 0.12);
 }
 
-.extractor-controls input[type="text"]::placeholder {
+.dm-controls input[type="text"]::placeholder {
     color: #b0aba4;
 }
 
 /* 설정(⋮) 버튼 — 추출하기 옆, 예외처리 등 전역 설정 팝업 진입점 */
-.te-icon-btn {
+.dm-icon-btn {
     flex-shrink: 0;
     width: 42px;
     height: 42px;
@@ -77,22 +77,22 @@
     transition: var(--transition-default);
 }
 
-.te-icon-btn:hover {
+.dm-icon-btn:hover {
     color: var(--text-main);
     border-color: var(--accent-color);
     background: #ffffff;
 }
 
 /* 업무그룹 콤보박스: 텍스트 입력 + 필터링되는 드롭다운 목록 */
-.te-combo {
+.dm-combo {
     position: relative;
 }
 
-.te-combo-input {
+.dm-combo-input {
     width: 140px;
 }
 
-.te-combo-list {
+.dm-combo-list {
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
@@ -110,11 +110,11 @@
     overflow-y: auto;
 }
 
-.te-combo-list.open {
+.dm-combo-list.open {
     display: block;
 }
 
-.te-combo-list li {
+.dm-combo-list li {
     padding: 8px 10px;
     border-radius: 6px;
     font-size: 14px;
@@ -122,12 +122,12 @@
     cursor: pointer;
 }
 
-.te-combo-list li:hover {
+.dm-combo-list li:hover {
     background: rgba(204, 107, 73, 0.08);
 }
 
 /* 추출 결과(좌) / SQL(우) 6:4 워크스페이스 — 남는 세로 공간을 꽉 채운다 */
-.extractor-workspace {
+.dm-workspace {
     flex: 1;
     display: grid;
     grid-template-columns: 3fr 2fr;
@@ -138,14 +138,14 @@
     min-height: 480px;
 }
 
-.extractor-workspace .te-panel {
+.dm-workspace .dm-panel {
     display: flex;
     flex-direction: column;
     gap: 12px;
     min-height: 0;
 }
 
-.te-panel-title {
+.dm-panel-title {
     font-size: 14px;
     font-weight: 600;
     color: var(--text-main);
@@ -154,7 +154,7 @@
 }
 
 /* 좌측 패널의 결과 영역: 목록/스피너/에러/빈상태가 이 안에서 교체된다 */
-.te-result {
+.dm-result {
     flex: 1;
     min-height: 0;
     display: flex;
@@ -162,7 +162,7 @@
     overflow-y: auto;
 }
 
-.te-empty {
+.dm-empty {
     flex: 1;
     display: flex;
     align-items: center;
@@ -172,8 +172,8 @@
     font-size: 13.5px;
 }
 
-/* 추출 결과 헤더(개수 배지 + 전체 복사) — sql_bench 톤 재사용, table_extractor 자체 스타일 */
-.te-result-header {
+/* 추출 결과 헤더(개수 배지 + 전체 복사) — sql_bench 톤 재사용, data_migration 자체 스타일 */
+.dm-result-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -184,13 +184,13 @@
 }
 
 /* 전체 복사 + 필터 입력을 묶는 우측 액션 그룹 */
-.te-result-actions {
+.dm-result-actions {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.te-filter-input {
+.dm-filter-input {
     font-family: inherit;
     font-size: 13px;
     height: 30px;
@@ -204,18 +204,18 @@
     transition: var(--transition-default);
 }
 
-.te-filter-input:focus {
+.dm-filter-input:focus {
     outline: none;
     border-color: var(--border-focus);
     box-shadow: 0 0 0 3px rgba(204, 107, 73, 0.12);
 }
 
-.te-filter-input::placeholder {
+.dm-filter-input::placeholder {
     color: #b0aba4;
 }
 
 /* 추출 결과 접두사 필터 체크박스 행 */
-.te-prefix-filters {
+.dm-prefix-filters {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -223,7 +223,7 @@
     margin-bottom: 14px;
 }
 
-.te-prefix-filters label {
+.dm-prefix-filters label {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -232,25 +232,25 @@
     cursor: pointer;
 }
 
-.te-prefix-filters input[type="checkbox"] {
+.dm-prefix-filters input[type="checkbox"] {
     cursor: pointer;
     accent-color: var(--accent-color);
 }
 
 /* 보류만 보기 체크박스 — 접두사 필터들과는 성격이 달라 구분선으로 살짝 떼어둔다 */
-.te-held-filter-label {
+.dm-held-filter-label {
     padding-left: 14px;
     border-left: 1px solid var(--border-color);
 }
 
-.te-table-list {
+.dm-table-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 10px;
     animation: fadeIn 0.3s ease-out;
 }
 
-.te-table-item {
+.dm-table-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -264,24 +264,24 @@
     transition: var(--transition-default);
 }
 
-.te-table-item:hover {
+.dm-table-item:hover {
     background-color: #faf9f6;
     border-color: var(--accent-color);
     box-shadow: var(--shadow-sm);
 }
 
 /* 보류된 테이블: 목록엔 남지만 톤다운해 지금 이관할 대상과 구분한다. */
-.te-table-item-held {
+.dm-table-item-held {
     opacity: 0.55;
     background: var(--card-bg);
     border-style: dashed;
 }
 
-.te-table-item-held:hover {
+.dm-table-item-held:hover {
     opacity: 0.8;
 }
 
-.te-table-name {
+.dm-table-name {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -290,44 +290,44 @@
 }
 
 /* 각 테이블 항목의 우측 버튼 그룹(복사 + 보류 + 삭제) */
-.te-item-actions {
+.dm-item-actions {
     display: flex;
     align-items: center;
     gap: 2px;
     flex-shrink: 0;
 }
 
-.te-del-btn:hover {
+.dm-del-btn:hover {
     color: var(--error-text);
     background-color: var(--error-bg);
 }
 
 /* 보류 토글 버튼: 복사/삭제와 같은 아이콘 버튼(.copy-btn) 베이스 위에, 보류 상태(.active)만
    강조색으로 채워 "담겨 있음"을 표시한다. 아이콘 모양은 보류/해제 동일, 색만 토글. */
-.te-hold-btn.active {
+.dm-hold-btn.active {
     color: #ffffff;
     background-color: var(--accent-color);
 }
 
-.te-hold-btn.active:hover {
+.dm-hold-btn.active:hover {
     color: #ffffff;
     background-color: var(--accent-hover);
 }
 
 /* 보류 개수 배지: 보류 테이블이 있을 때만 표시(JS가 display 토글) */
-.te-held-badge {
+.dm-held-badge {
     background: var(--accent-color);
     color: #ffffff;
 }
 
 /* FEP 접두사 테이블 별도 섹션 (읽기 전용) — 메인 목록 아래에 구분선으로 분리 */
-.te-fep-section {
+.dm-fep-section {
     margin-top: 20px;
     padding-top: 16px;
     border-top: 1px dashed var(--border-color);
 }
 
-.te-fep-title {
+.dm-fep-title {
     font-size: 14px;
     font-weight: 600;
     color: var(--text-main);
@@ -337,19 +337,19 @@
     margin-bottom: 12px;
 }
 
-.te-fep-note {
+.dm-fep-note {
     font-size: 12px;
     font-weight: 400;
     color: var(--error-text);
 }
 
-.te-fep-list {
+.dm-fep-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 10px;
 }
 
-.te-fep-item {
+.dm-fep-item {
     padding: 8px 12px;
     background: #ffffff;
     border: 1px solid var(--border-color);
@@ -362,13 +362,13 @@
 }
 
 /* 발견된 batch 참조 별도 섹션 (재귀 중 참조만 되고 소스는 안 들여다본 배치 ID) */
-.te-batch-section {
+.dm-batch-section {
     margin-top: 20px;
     padding-top: 16px;
     border-top: 1px dashed var(--border-color);
 }
 
-.te-batch-title {
+.dm-batch-title {
     font-size: 14px;
     font-weight: 600;
     color: var(--text-main);
@@ -378,26 +378,26 @@
     margin-bottom: 12px;
 }
 
-.te-batch-note {
+.dm-batch-note {
     font-size: 12px;
     font-weight: 400;
     color: var(--text-muted);
 }
 
-.te-batch-list {
+.dm-batch-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 10px;
 }
 
-/* 배치 추출 중 일부 ID 조회 실패 섹션(부분성공 안내) — 표 자체는 .te-nogen-table 재사용 */
-.te-failed-section {
+/* 배치 추출 중 일부 ID 조회 실패 섹션(부분성공 안내) — 표 자체는 .dm-nogen-table 재사용 */
+.dm-failed-section {
     margin-top: 20px;
     padding-top: 16px;
     border-top: 1px dashed var(--border-color);
 }
 
-.te-failed-title {
+.dm-failed-title {
     font-size: 14px;
     font-weight: 600;
     color: var(--error-text);
@@ -407,7 +407,7 @@
     margin-bottom: 12px;
 }
 
-.te-batch-item {
+.dm-batch-item {
     padding: 8px 12px;
     background: #ffffff;
     border: 1px solid var(--border-color);
@@ -420,13 +420,13 @@
 }
 
 /* 추출경로: 경유한 DBIO/service/biz 모듈 ID (그룹별 토글, 기본은 접힌 상태) */
-.te-trace-section {
+.dm-trace-section {
     margin-top: 20px;
     padding-top: 16px;
     border-top: 1px dashed var(--border-color);
 }
 
-.te-trace-title {
+.dm-trace-title {
     font-size: 14px;
     font-weight: 600;
     color: var(--text-main);
@@ -436,21 +436,21 @@
     margin-bottom: 12px;
 }
 
-.te-trace-note {
+.dm-trace-note {
     font-size: 12px;
     font-weight: 400;
     color: var(--text-muted);
 }
 
-.te-trace-group {
+.dm-trace-group {
     margin-bottom: 8px;
 }
 
-.te-trace-group:last-child {
+.dm-trace-group:last-child {
     margin-bottom: 0;
 }
 
-.te-trace-toggle {
+.dm-trace-toggle {
     width: 100%;
     display: flex;
     align-items: center;
@@ -465,32 +465,32 @@
     color: var(--text-muted);
 }
 
-.te-trace-toggle:hover {
+.dm-trace-toggle:hover {
     color: var(--text-main);
 }
 
-.te-trace-chevron {
+.dm-trace-chevron {
     display: inline-block;
     width: 1em;
     font-size: 10px;
 }
 
-.te-trace-group-title {
+.dm-trace-group-title {
     font-weight: 600;
 }
 
-.te-trace-list {
+.dm-trace-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 10px;
     margin-top: 8px;
 }
 
-.te-trace-list.te-trace-list-collapsed {
+.dm-trace-list.dm-trace-list-collapsed {
     display: none;
 }
 
-.te-trace-item {
+.dm-trace-item {
     padding: 8px 12px;
     background: #ffffff;
     border: 1px solid var(--border-color);
@@ -504,7 +504,7 @@
 
 /* 이관 sql 위 공통 PK 키 입력 컴포넌트 — 제목(head) + 일반/날짜 PK 박스 2개(각자 스크롤).
    패널의 남는 세로 공간을 여기로 흡수해 FROM/TO 링크·생성 버튼이 패널 맨 아래에 붙게 한다. */
-.te-keyin {
+.dm-keyin {
     flex: 1;
     min-height: 0;
     display: flex;
@@ -512,7 +512,7 @@
     animation: fadeIn 0.2s ease-out;
 }
 
-.te-keyin-head {
+.dm-keyin-head {
     font-size: 13px;
     font-weight: 600;
     color: var(--text-main);
@@ -523,7 +523,7 @@
 }
 
 /* 일반 PK / 날짜 PK 박스 — 각각 독립된 박스 + 독립 스크롤. 남는 세로 공간을 나눠 채운다. */
-.te-keyin-boxes {
+.dm-keyin-boxes {
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -531,7 +531,7 @@
     gap: 10px;
 }
 
-.te-keyin-box {
+.dm-keyin-box {
     flex: 1;
     min-height: 80px;
     overflow-y: auto;
@@ -541,11 +541,11 @@
     padding: 12px;
 }
 
-.te-keyin-box .te-empty {
+.dm-keyin-box .dm-empty {
     min-height: 60px;
 }
 
-.te-keyin-section-title {
+.dm-keyin-section-title {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -556,26 +556,26 @@
 }
 
 /* 박스 제목 오른쪽 보조 안내문(일반 PK의 "여러 개는 쉼표로 구분" 등) — 제목보다 옅고 얇게 */
-.te-keyin-section-note {
+.dm-keyin-section-note {
     font-size: 11px;
     font-weight: 400;
     color: var(--text-muted);
     opacity: 0.8;
 }
 
-.te-keyin-fields {
+.dm-keyin-fields {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 10px;
 }
 
-.te-keyin-field {
+.dm-keyin-field {
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
-.te-keyin-col {
+.dm-keyin-col {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
     color: var(--text-muted);
@@ -587,14 +587,14 @@
 /* 날짜 필드: 컬럼명 + [단일|기간] 토글을 한 줄에, 아래 입력란. 입력칸 폭을 줄여둬서
    일반 PK 필드와 같은 1칸이면 충분 — 남는 폭에 따라 자동으로 여러 개가 한 줄에 배치된다. */
 
-.te-keyin-col-row {
+.dm-keyin-col-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
 }
 
-.te-keyin-toggle {
+.dm-keyin-toggle {
     display: inline-flex;
     flex-shrink: 0;
     border: 1px solid var(--border-color);
@@ -602,7 +602,7 @@
     overflow: hidden;
 }
 
-.te-mode-btn {
+.dm-mode-btn {
     font-family: inherit;
     font-size: 11px;
     padding: 2px 10px;
@@ -613,28 +613,28 @@
     transition: var(--transition-default);
 }
 
-.te-mode-btn.active {
+.dm-mode-btn.active {
     background: var(--accent-color);
     color: #ffffff;
 }
 
-.te-keyin-range {
+.dm-keyin-range {
     display: flex;
     align-items: center;
     gap: 6px;
 }
 
-.te-keyin-range .te-keyin-input {
+.dm-keyin-range .dm-keyin-input {
     flex: 1;
     min-width: 0;
 }
 
-.te-range-sep {
+.dm-range-sep {
     color: var(--text-muted);
     flex-shrink: 0;
 }
 
-.te-keyin-input {
+.dm-keyin-input {
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
     height: 32px;
@@ -647,19 +647,19 @@
     transition: var(--transition-default);
 }
 
-.te-keyin-input:focus {
+.dm-keyin-input:focus {
     outline: none;
     border-color: var(--border-focus);
     box-shadow: 0 0 0 3px rgba(204, 107, 73, 0.12);
 }
 
-.te-keyin-note {
+.dm-keyin-note {
     margin-top: 10px;
     font-size: 12px;
     color: var(--error-text);
 }
 
-.te-keyin-warn {
+.dm-keyin-warn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -670,7 +670,7 @@
 }
 
 /* 이관 SQL 생성 바: FROM/TO DB 링크 입력(라벨 포함) + 생성 버튼 */
-.te-gen-bar {
+.dm-gen-bar {
     display: flex;
     gap: 8px;
     align-items: flex-end;
@@ -679,7 +679,7 @@
 }
 
 /* 각 링크 입력 = 라벨 + 입력칸 세로 그룹 */
-.te-gen-field {
+.dm-gen-field {
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -687,13 +687,13 @@
     min-width: 120px;
 }
 
-.te-gen-label {
+.dm-gen-label {
     font-size: 11px;
     color: var(--text-muted);
     padding-left: 2px;
 }
 
-.te-dblink-input {
+.dm-dblink-input {
     width: 100%;
     box-sizing: border-box;
     font-family: 'JetBrains Mono', monospace;
@@ -708,29 +708,29 @@
     transition: var(--transition-default);
 }
 
-.te-dblink-input:focus {
+.dm-dblink-input:focus {
     outline: none;
     border-color: var(--border-focus);
     box-shadow: 0 0 0 3px rgba(204, 107, 73, 0.12);
 }
 
-.te-dblink-input::placeholder {
+.dm-dblink-input::placeholder {
     color: #b0aba4;
 }
 
-.te-gen-bar #te-generate {
+.dm-gen-bar #dm-generate {
     flex-shrink: 0;
 }
 
 /* 생성 버튼 안내 문구(인라인 SQL 박스 제거 후 자리) */
-.te-keyin-hint {
+.dm-keyin-hint {
     font-size: 12px;
     color: var(--text-muted);
     padding: 6px 2px;
 }
 
 /* --- 이관 SQL 팝업(모달) --- */
-.te-modal-overlay {
+.dm-modal-overlay {
     position: fixed;
     inset: 0;
     z-index: 900;
@@ -742,7 +742,7 @@
     animation: fadeIn 0.15s ease-out;
 }
 
-.te-modal {
+.dm-modal {
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -755,7 +755,7 @@
     overflow: hidden;
 }
 
-.te-modal-head {
+.dm-modal-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -764,19 +764,19 @@
     border-bottom: 1px solid var(--border-color);
 }
 
-.te-modal-title {
+.dm-modal-title {
     font-size: 15px;
     font-weight: 600;
     color: var(--text-main);
 }
 
-.te-modal-head-actions {
+.dm-modal-head-actions {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.te-modal-x {
+.dm-modal-x {
     border: none;
     background: transparent;
     font-size: 22px;
@@ -786,11 +786,11 @@
     padding: 0 4px;
 }
 
-.te-modal-x:hover {
+.dm-modal-x:hover {
     color: var(--text-main);
 }
 
-.te-modal-body {
+.dm-modal-body {
     padding: 16px 18px;
     overflow-y: auto;
     display: flex;
@@ -798,30 +798,30 @@
     gap: 16px;
 }
 
-.te-sql-group {
+.dm-sql-group {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-.te-sql-group-head {
+.dm-sql-group-head {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.te-sql-group-key {
+.dm-sql-group-key {
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
     font-weight: 600;
     color: var(--text-main);
 }
 
-.te-sql-group-head .te-sql-copy {
+.dm-sql-group-head .dm-sql-copy {
     margin-left: auto;
 }
 
-.te-sql-box {
+.dm-sql-box {
     width: 100%;
     box-sizing: border-box;
     resize: vertical;
@@ -836,36 +836,36 @@
     color: var(--text-main);
 }
 
-.te-sql-box:focus {
+.dm-sql-box:focus {
     outline: none;
     border-color: var(--border-focus);
     box-shadow: 0 0 0 3px rgba(204, 107, 73, 0.12);
 }
 
-.te-modal-note {
+.dm-modal-note {
     font-size: 12px;
     color: var(--error-text);
 }
 
 /* 이관 SQL 미생성 테이블 박스(모달 하단) */
-.te-nogen-group {
+.dm-nogen-group {
     border-top: 1px dashed var(--border-color);
     padding-top: 14px;
 }
 
-.te-nogen-group .te-sql-group-key {
+.dm-nogen-group .dm-sql-group-key {
     color: var(--error-text);
 }
 
 /* --- 일반 PK / 날짜 PK 팝업 (같은 사이즈·버튼 스타일 공유) --- */
-.te-pk-modal {
+.dm-pk-modal {
     max-width: 700px;
     max-height: 80vh;
 }
 
 /* "일반 PK"/"날짜 PK" 제목 줄에 붙는 전체보기 버튼 — 제목 줄이 flex라 margin-left:auto로 맨 오른쪽에 붙는다 */
-.te-pk-popup-btn,
-.te-date-pk-popup-btn {
+.dm-pk-popup-btn,
+.dm-date-pk-popup-btn {
     margin-left: auto;
     padding: 2px 10px;
     font-size: 11px;
@@ -873,18 +873,18 @@
 }
 
 /* --- 설정 팝업(사이드 네비 + 패널) --- */
-.te-settings-modal {
+.dm-settings-modal {
     max-width: 960px;
     height: 720px;
 }
 
-.te-settings-body {
+.dm-settings-body {
     display: flex;
     flex: 1;
     min-height: 0;
 }
 
-.te-settings-nav {
+.dm-settings-nav {
     flex-shrink: 0;
     width: 180px;
     display: flex;
@@ -895,7 +895,7 @@
     overflow-y: auto;
 }
 
-.te-settings-nav-item {
+.dm-settings-nav-item {
     display: block;
     width: 100%;
     text-align: left;
@@ -910,17 +910,17 @@
     transition: var(--transition-default);
 }
 
-.te-settings-nav-item:hover {
+.dm-settings-nav-item:hover {
     background: rgba(204, 107, 73, 0.08);
     color: var(--text-main);
 }
 
-.te-settings-nav-item.active {
+.dm-settings-nav-item.active {
     background: var(--accent-color);
     color: #ffffff;
 }
 
-.te-settings-panel {
+.dm-settings-panel {
     flex: 1;
     min-width: 0;
     padding: 18px;
@@ -930,18 +930,18 @@
     gap: 14px;
 }
 
-.te-excl-desc {
+.dm-excl-desc {
     font-size: 12.5px;
     line-height: 1.6;
     color: var(--text-muted);
 }
 
-.te-excl-add-row {
+.dm-excl-add-row {
     display: flex;
     gap: 8px;
 }
 
-.te-excl-input {
+.dm-excl-input {
     flex: 1;
     min-width: 0;
     font-family: 'JetBrains Mono', monospace;
@@ -956,13 +956,13 @@
     transition: var(--transition-default);
 }
 
-.te-excl-input:focus {
+.dm-excl-input:focus {
     outline: none;
     border-color: var(--border-focus);
     box-shadow: 0 0 0 3px rgba(204, 107, 73, 0.12);
 }
 
-.te-excl-list {
+.dm-excl-list {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -972,7 +972,7 @@
     align-content: start;
 }
 
-.te-excl-item {
+.dm-excl-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -983,7 +983,7 @@
     border-radius: 6px;
 }
 
-.te-excl-name {
+.dm-excl-name {
     font-family: 'JetBrains Mono', monospace;
     font-size: 12.5px;
     color: var(--text-main);
@@ -993,7 +993,7 @@
 }
 
 /* 저장 버튼 행 — 미저장 변경사항 힌트 + 저장 버튼 */
-.te-excl-save-row {
+.dm-excl-save-row {
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -1003,57 +1003,57 @@
     border-top: 1px solid var(--border-color);
 }
 
-.te-excl-dirty-hint {
+.dm-excl-dirty-hint {
     font-size: 12px;
     color: var(--error-text);
     margin-right: auto;
 }
 
-.te-excl-save-row .btn-secondary:disabled {
+.dm-excl-save-row .btn-secondary:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     box-shadow: none;
 }
 
-.te-excl-save-row .btn-secondary:disabled:hover {
+.dm-excl-save-row .btn-secondary:disabled:hover {
     background-color: #ffffff;
     border-color: var(--border-color);
 }
 
-.te-nogen-table {
+.dm-nogen-table {
     width: 100%;
     table-layout: fixed;
     border-collapse: collapse;
     font-size: 13px;
 }
 
-.te-nogen-table th,
-.te-nogen-table td {
+.dm-nogen-table th,
+.dm-nogen-table td {
     text-align: left;
     padding: 8px 12px;
     border: 1px solid var(--border-color);
     overflow-wrap: break-word;
 }
 
-.te-nogen-table th {
+.dm-nogen-table th {
     background: #faf9f6;
     font-weight: 600;
     color: var(--text-main);
 }
 
-.te-nogen-table td:first-child {
+.dm-nogen-table td:first-child {
     width: 32%;
     font-family: 'JetBrains Mono', monospace;
     color: var(--text-main);
 }
 
-.te-nogen-table td:last-child {
+.dm-nogen-table td:last-child {
     color: var(--text-muted);
     white-space: normal;
 }
 
 @media (max-width: 900px) {
-    .extractor-workspace {
+    .dm-workspace {
         grid-template-columns: 1fr;
     }
 }

@@ -1,130 +1,130 @@
 (function () {
-    var container = document.getElementById('page-table-extractor');
+    var container = document.getElementById('page-data-migration');
     if (!container) return;
 
     container.innerHTML = `
         <div class="header">
             <div class="badge">테이블 추출 및 이관 도구</div>
-            <h1>Table Extractor</h1>
+            <h1>Data Migration</h1>
             <p>서비스 ID 또는 DBIO ID를 입력하면 참조하는 모든 테이블을 추출합니다.<br>현재 프로시저 내부의 테이블의 추출 기능은 지원하지 않습니다.</p>
             
         </div>
 
-        <div class="extractor-controls">
-            <select id="te-id-type">
+        <div class="dm-controls">
+            <select id="dm-id-type">
                 <option value="dbio">DBIO</option>
                 <option value="service">Service</option>
                 <option value="batch">Batch</option>
                 <option value="biz">Biz</option>
             </select>
-            <div class="te-combo" id="te-prog-combo">
-                <input type="text" id="te-prog" class="te-combo-input" placeholder="업무그룹" autocomplete="off">
-                <ul id="te-prog-list" class="te-combo-list"></ul>
+            <div class="dm-combo" id="dm-prog-combo">
+                <input type="text" id="dm-prog" class="dm-combo-input" placeholder="업무그룹" autocomplete="off">
+                <ul id="dm-prog-list" class="dm-combo-list"></ul>
             </div>
-            <input type="text" id="te-id-input" placeholder="DBIO ID를 입력하세요 (여러 개는 쉼표로 구분해 입력하세요)">
-            <button id="te-submit">추출하기</button>
-            <button id="te-settings-btn" class="te-icon-btn" title="설정" aria-label="설정">&#8942;</button>
+            <input type="text" id="dm-id-input" placeholder="DBIO ID를 입력하세요 (여러 개는 쉼표로 구분해 입력하세요)">
+            <button id="dm-submit">추출하기</button>
+            <button id="dm-settings-btn" class="dm-icon-btn" title="설정" aria-label="설정">&#8942;</button>
         </div>
 
-        <div class="extractor-workspace">
-            <div class="card te-panel">
-                <div class="te-panel-title">추출된 테이블</div>
-                <div id="te-result" class="te-result">
-                    <div class="te-empty">추출된 테이블이 여기에 표시됩니다.</div>
+        <div class="dm-workspace">
+            <div class="card dm-panel">
+                <div class="dm-panel-title">추출된 테이블</div>
+                <div id="dm-result" class="dm-result">
+                    <div class="dm-empty">추출된 테이블이 여기에 표시됩니다.</div>
                 </div>
             </div>
-            <div class="card te-panel">
-                <div class="te-panel-title">이관 sql</div>
-                <div id="te-keyin" class="te-keyin">
-                    <div class="te-empty">테이블을 추출·선택하면 PK 입력란이 표시됩니다.</div>
+            <div class="card dm-panel">
+                <div class="dm-panel-title">이관 sql</div>
+                <div id="dm-keyin" class="dm-keyin">
+                    <div class="dm-empty">테이블을 추출·선택하면 PK 입력란이 표시됩니다.</div>
                 </div>
-                <div class="te-gen-bar">
-                    <label class="te-gen-field">
-                        <span class="te-gen-label">from link</span>
-                        <input type="text" id="te-from-link" class="te-dblink-input" placeholder="FROM 링크(원격 소스)" value="@dl_patru_Trups" autocomplete="off">
+                <div class="dm-gen-bar">
+                    <label class="dm-gen-field">
+                        <span class="dm-gen-label">from link</span>
+                        <input type="text" id="dm-from-link" class="dm-dblink-input" placeholder="FROM 링크(원격 소스)" value="@dl_patru_Trups" autocomplete="off">
                     </label>
-                    <label class="te-gen-field">
-                        <span class="te-gen-label">to link</span>
-                        <input type="text" id="te-to-link" class="te-dblink-input" placeholder="TO 링크(대상, 비우면 로컬)" value="@dl_datru_truds" autocomplete="off">
+                    <label class="dm-gen-field">
+                        <span class="dm-gen-label">to link</span>
+                        <input type="text" id="dm-to-link" class="dm-dblink-input" placeholder="TO 링크(대상, 비우면 로컬)" value="@dl_datru_truds" autocomplete="off">
                     </label>
-                    <button id="te-generate" class="btn-secondary">이관 SQL 생성</button>
+                    <button id="dm-generate" class="btn-secondary">이관 SQL 생성</button>
                 </div>
-                <div class="te-keyin-hint">생성 버튼을 누르면 이관 SQL이 팝업으로 표시됩니다.</div>
+                <div class="dm-keyin-hint">생성 버튼을 누르면 이관 SQL이 팝업으로 표시됩니다.</div>
             </div>
         </div>
 
-        <div id="te-modal" class="te-modal-overlay" style="display:none;">
-            <div class="te-modal" role="dialog" aria-modal="true">
-                <div class="te-modal-head">
-                    <span class="te-modal-title">이관 SQL</span>
-                    <div class="te-modal-head-actions">
-                        <button id="te-modal-copy-all" class="btn-secondary">전체 복사</button>
-                        <button id="te-modal-close" class="te-modal-x" title="닫기" aria-label="닫기">&times;</button>
+        <div id="dm-modal" class="dm-modal-overlay" style="display:none;">
+            <div class="dm-modal" role="dialog" aria-modal="true">
+                <div class="dm-modal-head">
+                    <span class="dm-modal-title">이관 SQL</span>
+                    <div class="dm-modal-head-actions">
+                        <button id="dm-modal-copy-all" class="btn-secondary">전체 복사</button>
+                        <button id="dm-modal-close" class="dm-modal-x" title="닫기" aria-label="닫기">&times;</button>
                     </div>
                 </div>
-                <div id="te-modal-body" class="te-modal-body"></div>
+                <div id="dm-modal-body" class="dm-modal-body"></div>
             </div>
         </div>
 
-        <div id="te-settings-modal" class="te-modal-overlay" style="display:none;">
-            <div class="te-modal te-settings-modal" role="dialog" aria-modal="true">
-                <div class="te-modal-head">
-                    <span class="te-modal-title">설정</span>
-                    <div class="te-modal-head-actions">
-                        <button id="te-settings-close" class="te-modal-x" title="닫기" aria-label="닫기">&times;</button>
+        <div id="dm-settings-modal" class="dm-modal-overlay" style="display:none;">
+            <div class="dm-modal dm-settings-modal" role="dialog" aria-modal="true">
+                <div class="dm-modal-head">
+                    <span class="dm-modal-title">설정</span>
+                    <div class="dm-modal-head-actions">
+                        <button id="dm-settings-close" class="dm-modal-x" title="닫기" aria-label="닫기">&times;</button>
                     </div>
                 </div>
-                <div class="te-settings-body">
-                    <nav class="te-settings-nav" id="te-settings-nav">
-                        <button type="button" class="te-settings-nav-item active" data-panel="excluded-tables">테이블 추출 예외처리</button>
-                        <button type="button" class="te-settings-nav-item" data-panel="excluded-refs">모듈 예외처리</button>
+                <div class="dm-settings-body">
+                    <nav class="dm-settings-nav" id="dm-settings-nav">
+                        <button type="button" class="dm-settings-nav-item active" data-panel="excluded-tables">테이블 추출 예외처리</button>
+                        <button type="button" class="dm-settings-nav-item" data-panel="excluded-refs">모듈 예외처리</button>
                     </nav>
-                    <div class="te-settings-panel" id="te-settings-panel"></div>
+                    <div class="dm-settings-panel" id="dm-settings-panel"></div>
                 </div>
             </div>
         </div>
 
-        <div id="te-pk-modal" class="te-modal-overlay" style="display:none;">
-            <div class="te-modal te-pk-modal" role="dialog" aria-modal="true">
-                <div class="te-modal-head">
-                    <span class="te-modal-title">일반 PK 키 입력</span>
-                    <div class="te-modal-head-actions">
-                        <button id="te-pk-modal-close" class="te-modal-x" title="닫기" aria-label="닫기">&times;</button>
+        <div id="dm-pk-modal" class="dm-modal-overlay" style="display:none;">
+            <div class="dm-modal dm-pk-modal" role="dialog" aria-modal="true">
+                <div class="dm-modal-head">
+                    <span class="dm-modal-title">일반 PK 키 입력</span>
+                    <div class="dm-modal-head-actions">
+                        <button id="dm-pk-modal-close" class="dm-modal-x" title="닫기" aria-label="닫기">&times;</button>
                     </div>
                 </div>
-                <div id="te-pk-modal-body" class="te-modal-body">
-                    <div class="te-keyin-fields" id="te-pk-modal-fields"></div>
+                <div id="dm-pk-modal-body" class="dm-modal-body">
+                    <div class="dm-keyin-fields" id="dm-pk-modal-fields"></div>
                 </div>
             </div>
         </div>
 
-        <div id="te-date-pk-modal" class="te-modal-overlay" style="display:none;">
-            <div class="te-modal te-pk-modal" role="dialog" aria-modal="true">
-                <div class="te-modal-head">
-                    <span class="te-modal-title">날짜 PK 키 입력</span>
-                    <div class="te-modal-head-actions">
-                        <button id="te-date-pk-modal-close" class="te-modal-x" title="닫기" aria-label="닫기">&times;</button>
+        <div id="dm-date-pk-modal" class="dm-modal-overlay" style="display:none;">
+            <div class="dm-modal dm-pk-modal" role="dialog" aria-modal="true">
+                <div class="dm-modal-head">
+                    <span class="dm-modal-title">날짜 PK 키 입력</span>
+                    <div class="dm-modal-head-actions">
+                        <button id="dm-date-pk-modal-close" class="dm-modal-x" title="닫기" aria-label="닫기">&times;</button>
                     </div>
                 </div>
-                <div id="te-date-pk-modal-body" class="te-modal-body">
-                    <div class="te-keyin-fields" id="te-date-pk-modal-fields"></div>
+                <div id="dm-date-pk-modal-body" class="dm-modal-body">
+                    <div class="dm-keyin-fields" id="dm-date-pk-modal-fields"></div>
                 </div>
             </div>
         </div>
     `;
 
-    var typeSel = container.querySelector('#te-id-type');
-    var idInput = container.querySelector('#te-id-input');
-    var keyinEl = container.querySelector('#te-keyin');
-    var fromLinkInput = container.querySelector('#te-from-link');
-    var toLinkInput = container.querySelector('#te-to-link');
-    var generateBtn = container.querySelector('#te-generate');
-    var modalEl = container.querySelector('#te-modal');
-    var modalBodyEl = container.querySelector('#te-modal-body');
-    var pkModalEl = container.querySelector('#te-pk-modal');
-    var pkModalFieldsEl = container.querySelector('#te-pk-modal-fields');
-    var datePkModalEl = container.querySelector('#te-date-pk-modal');
-    var datePkModalFieldsEl = container.querySelector('#te-date-pk-modal-fields');
+    var typeSel = container.querySelector('#dm-id-type');
+    var idInput = container.querySelector('#dm-id-input');
+    var keyinEl = container.querySelector('#dm-keyin');
+    var fromLinkInput = container.querySelector('#dm-from-link');
+    var toLinkInput = container.querySelector('#dm-to-link');
+    var generateBtn = container.querySelector('#dm-generate');
+    var modalEl = container.querySelector('#dm-modal');
+    var modalBodyEl = container.querySelector('#dm-modal-body');
+    var pkModalEl = container.querySelector('#dm-pk-modal');
+    var pkModalFieldsEl = container.querySelector('#dm-pk-modal-fields');
+    var datePkModalEl = container.querySelector('#dm-date-pk-modal');
+    var datePkModalFieldsEl = container.querySelector('#dm-date-pk-modal-fields');
     var lastSql = '';   // '전체 복사'용 전체 SQL 캐시
     var PLACEHOLDER = {
         dbio: 'DBIO ID를 입력하세요 (여러 개는 쉼표로 구분해 입력하세요)',
@@ -148,9 +148,9 @@
         .catch(function () { /* 실패해도 조용히 빈 목록 유지 — 콤보가 비어 보일 뿐 기능은 안 죽음 */ });
     // 추출 결과 접두사 필터 체크박스(테이블명 접두사)
     var PREFIXES = ['TRU', 'PFO', 'PTN', 'RPT'];
-    var progInput = container.querySelector('#te-prog');
-    var progList = container.querySelector('#te-prog-list');
-    var progCombo = container.querySelector('#te-prog-combo');
+    var progInput = container.querySelector('#dm-prog');
+    var progList = container.querySelector('#dm-prog-list');
+    var progCombo = container.querySelector('#dm-prog-combo');
 
     // DBIO는 리소스그룹(업무그룹)이 파일 경로에 쓰이지 않아 콤보박스를 숨긴다.
     // Service/Batch/Biz 등 그 외 타입에서만 리소스그룹을 선택받는다.
@@ -195,9 +195,9 @@
         progList.classList.remove('open');
     });
 
-    // --- 추출하기: GET /table-extractor/{id_type}/{prog}/{id} 연결 ---
-    var submitBtn = container.querySelector('#te-submit');
-    var resultEl = container.querySelector('#te-result');
+    // --- 추출하기: GET /data-migration/{id_type}/{prog}/{id} 연결 ---
+    var submitBtn = container.querySelector('#dm-submit');
+    var resultEl = container.querySelector('#dm-result');
 
     // 좌(목록)/우(키 입력) 패널이 공유하는 상태 — 추출마다 초기화된다.
     var allMainTables = [];              // FEP 제외한 메인 목록(삭제 반영)
@@ -223,7 +223,7 @@
         });
     }
 
-    // 입력창(#te-id-input)의 원본 텍스트 → ID 목록(쉼표 구분, 공백 제거, 중복 제거, 첫 등장 순서
+    // 입력창(#dm-id-input)의 원본 텍스트 → ID 목록(쉼표 구분, 공백 제거, 중복 제거, 첫 등장 순서
     // 유지). 아직은 결과에서 첫 번째 ID만 실제로 조회하지만(여러 개 동시 조회는 다음 업데이트
     // 예정), 입력 파싱 자체는 미리 만들어둔다.
     var MAX_IDS = 50;
@@ -241,7 +241,7 @@
     }
 
     function showEmpty(msg) {
-        resultEl.innerHTML = '<div class="te-empty">' + escapeHtml(msg) + '</div>';
+        resultEl.innerHTML = '<div class="dm-empty">' + escapeHtml(msg) + '</div>';
     }
 
     function resetKeyin() {
@@ -253,13 +253,13 @@
         keyinState = {};
         lastNormalCols = [];
         lastDateCols = [];
-        keyinEl.innerHTML = '<div class="te-keyin-box"><div class="te-empty">테이블을 추출하면 PK 입력란이 표시됩니다.</div></div>';
+        keyinEl.innerHTML = '<div class="dm-keyin-box"><div class="dm-empty">테이블을 추출하면 PK 입력란이 표시됩니다.</div></div>';
     }
 
     function showSpinner() {
         resetKeyin();  // 새 추출 시작 → 이전 키 입력 상태 정리
         resultEl.innerHTML = `
-            <div class="te-empty">
+            <div class="dm-empty">
                 <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
                     <svg class="spinner" viewBox="0 0 50 50">
                         <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-miterlimit="10"/>
@@ -345,17 +345,17 @@
 
     function renderKeyin(errorMsg) {
         if (errorMsg) {
-            keyinEl.innerHTML = '<div class="te-keyin-box"><div class="te-keyin-warn">' + escapeHtml(errorMsg) + '</div></div>';
+            keyinEl.innerHTML = '<div class="dm-keyin-box"><div class="dm-keyin-warn">' + escapeHtml(errorMsg) + '</div></div>';
             return;
         }
 
         var sel = visibleTables;   // 필터된(보이는) 결과가 곧 이관 대상
         if (!sel.length) {
-            keyinEl.innerHTML = '<div class="te-keyin-box"><div class="te-empty">대상 테이블이 없습니다(필터를 확인하세요).</div></div>';
+            keyinEl.innerHTML = '<div class="dm-keyin-box"><div class="dm-empty">대상 테이블이 없습니다(필터를 확인하세요).</div></div>';
             return;
         }
         if (!pkLoaded) {
-            keyinEl.innerHTML = '<div class="te-keyin-box"><div class="te-empty">PK 정보를 불러오는 중...</div></div>';
+            keyinEl.innerHTML = '<div class="dm-keyin-box"><div class="dm-empty">PK 정보를 불러오는 중...</div></div>';
             return;
         }
 
@@ -363,7 +363,7 @@
         var union = computePkUnion(sel);
 
         if (!union.length) {
-            keyinEl.innerHTML = '<div class="te-keyin-box"><div class="te-keyin-warn">대상 ' + sel.length + '개 테이블에 PK 정보가 없습니다.'
+            keyinEl.innerHTML = '<div class="dm-keyin-box"><div class="dm-keyin-warn">대상 ' + sel.length + '개 테이블에 PK 정보가 없습니다.'
                 + (missing.length ? ' (PK 정보 없음: ' + escapeHtml(missing.join(', ')) + ')' : '') + '</div></div>';
             return;
         }
@@ -374,17 +374,17 @@
         lastNormalCols = normalCols;   // 팝업이 열릴 때 이 스냅샷으로 필드를 그린다
         lastDateCols = dateCols;
 
-        var pkPopupBtn = '<button type="button" class="te-pk-popup-btn btn-secondary">전체보기</button>';
-        var datePkPopupBtn = '<button type="button" class="te-date-pk-popup-btn btn-secondary">전체보기</button>';
+        var pkPopupBtn = '<button type="button" class="dm-pk-popup-btn btn-secondary">전체보기</button>';
+        var datePkPopupBtn = '<button type="button" class="dm-date-pk-popup-btn btn-secondary">전체보기</button>';
 
         keyinEl.innerHTML =
-            '<div class="te-keyin-head">PK 키 입력 <span class="count-badge">대상 ' + sel.length + '개 · PK ' + union.length + '개</span></div>'
-            + '<div class="te-keyin-boxes">'
+            '<div class="dm-keyin-head">PK 키 입력 <span class="count-badge">대상 ' + sel.length + '개 · PK ' + union.length + '개</span></div>'
+            + '<div class="dm-keyin-boxes">'
             + renderKeyinBox('일반 PK', normalCols, '키값 다 채울 필요 없음. 쉼표로 구분하여 복수건의 키값 입력시 in절로 작성됨', pkPopupBtn)
             + renderKeyinBox('날짜 PK', dateCols, null, datePkPopupBtn)
             + '</div>'
             + (missing.length
-                ? '<div class="te-keyin-note">PK 정보 없는 테이블: ' + escapeHtml(missing.join(', ')) + '</div>'
+                ? '<div class="dm-keyin-note">PK 정보 없는 테이블: ' + escapeHtml(missing.join(', ')) + '</div>'
                 : '');
 
         bindKeyinEvents();
@@ -395,12 +395,12 @@
     // popupBtnHtml은 제목 줄에 끼워 넣을 버튼(현재 "일반 PK"만 "전체보기" 팝업 버튼을 전달, 선택).
     function renderKeyinBox(title, cols, note, popupBtnHtml) {
         if (!cols.length) return '';
-        return '<div class="te-keyin-box">'
-            + '<div class="te-keyin-section-title">' + escapeHtml(title) + ' <span class="count-badge">' + cols.length + '개</span>'
-            + (note ? ' <span class="te-keyin-section-note">' + escapeHtml(note) + '</span>' : '')
+        return '<div class="dm-keyin-box">'
+            + '<div class="dm-keyin-section-title">' + escapeHtml(title) + ' <span class="count-badge">' + cols.length + '개</span>'
+            + (note ? ' <span class="dm-keyin-section-note">' + escapeHtml(note) + '</span>' : '')
             + (popupBtnHtml || '')
             + '</div>'
-            + '<div class="te-keyin-fields">'
+            + '<div class="dm-keyin-fields">'
             + cols.map(renderKeyinField).join('')
             + '</div>'
             + '</div>';
@@ -409,34 +409,34 @@
     // 필드 하나 렌더: 일반=입력 1칸, 날짜=[단일|기간] 토글 + 모드별 입력
     function renderKeyinField(col) {
         var st = ensureKeyinState(col);
-        var colHtml = '<span class="te-keyin-col" title="' + escapeHtml(col) + '">' + escapeHtml(col) + '</span>';
+        var colHtml = '<span class="dm-keyin-col" title="' + escapeHtml(col) + '">' + escapeHtml(col) + '</span>';
 
         if (!st.isDate) {
-            return '<div class="te-keyin-field">'
+            return '<div class="dm-keyin-field">'
                 + colHtml
-                + '<input type="text" class="te-keyin-input" data-role="value" data-pk="' + escapeHtml(col) + '"'
+                + '<input type="text" class="dm-keyin-input" data-role="value" data-pk="' + escapeHtml(col) + '"'
                 + ' value="' + escapeHtml(st.value) + '" placeholder="' + escapeHtml(col) + ' 값">'
                 + '</div>';
         }
 
-        var toggle = '<span class="te-keyin-toggle" data-pk="' + escapeHtml(col) + '">'
-            + '<button type="button" class="te-mode-btn' + (st.mode === 'single' ? ' active' : '') + '" data-mode="single">단일</button>'
-            + '<button type="button" class="te-mode-btn' + (st.mode === 'range' ? ' active' : '') + '" data-mode="range">기간</button>'
+        var toggle = '<span class="dm-keyin-toggle" data-pk="' + escapeHtml(col) + '">'
+            + '<button type="button" class="dm-mode-btn' + (st.mode === 'single' ? ' active' : '') + '" data-mode="single">단일</button>'
+            + '<button type="button" class="dm-mode-btn' + (st.mode === 'range' ? ' active' : '') + '" data-mode="range">기간</button>'
             + '</span>';
 
         var inputs = st.mode === 'range'
-            ? '<span class="te-keyin-range">'
-                + '<input type="text" class="te-keyin-input" data-role="from" data-pk="' + escapeHtml(col) + '"'
+            ? '<span class="dm-keyin-range">'
+                + '<input type="text" class="dm-keyin-input" data-role="from" data-pk="' + escapeHtml(col) + '"'
                 + ' inputmode="numeric" maxlength="8" value="' + escapeHtml(st.from) + '" placeholder="YYYYMMDD">'
-                + '<span class="te-range-sep">~</span>'
-                + '<input type="text" class="te-keyin-input" data-role="to" data-pk="' + escapeHtml(col) + '"'
+                + '<span class="dm-range-sep">~</span>'
+                + '<input type="text" class="dm-keyin-input" data-role="to" data-pk="' + escapeHtml(col) + '"'
                 + ' inputmode="numeric" maxlength="8" value="' + escapeHtml(st.to) + '" placeholder="YYYYMMDD">'
                 + '</span>'
-            : '<input type="text" class="te-keyin-input" data-role="single" data-pk="' + escapeHtml(col) + '"'
+            : '<input type="text" class="dm-keyin-input" data-role="single" data-pk="' + escapeHtml(col) + '"'
                 + ' inputmode="numeric" maxlength="8" value="' + escapeHtml(st.single) + '" placeholder="YYYYMMDD">';
 
-        return '<div class="te-keyin-field te-keyin-field-date">'
-            + '<span class="te-keyin-col-row">' + colHtml + toggle + '</span>'
+        return '<div class="dm-keyin-field dm-keyin-field-date">'
+            + '<span class="dm-keyin-col-row">' + colHtml + toggle + '</span>'
             + inputs
             + '</div>';
     }
@@ -448,7 +448,7 @@
     function bindKeyinEvents(root, onModeChange) {
         root = root || keyinEl;
         onModeChange = onModeChange || renderKeyin;
-        root.querySelectorAll('.te-keyin-input').forEach(function (inp) {
+        root.querySelectorAll('.dm-keyin-input').forEach(function (inp) {
             inp.addEventListener('input', function (e) {
                 var st = ensureKeyinState(e.currentTarget.getAttribute('data-pk'));
                 var role = e.currentTarget.getAttribute('data-role');
@@ -461,9 +461,9 @@
                 }
             });
         });
-        root.querySelectorAll('.te-mode-btn').forEach(function (btn) {
+        root.querySelectorAll('.dm-mode-btn').forEach(function (btn) {
             btn.addEventListener('click', function (e) {
-                var col = e.currentTarget.closest('.te-keyin-toggle').getAttribute('data-pk');
+                var col = e.currentTarget.closest('.dm-keyin-toggle').getAttribute('data-pk');
                 ensureKeyinState(col).mode = e.currentTarget.getAttribute('data-mode');
                 onModeChange();   // 모드 전환 → 입력란 재구성(현재 보고 있는 화면 기준)
             });
@@ -514,7 +514,7 @@
         }
 
         try {
-            var res = await fetch('table-extractor/migrate-sql', {
+            var res = await fetch('data-migration/migrate-sql', {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({
@@ -549,24 +549,24 @@
 
         var html = groups.length
             ? groups.map(function (g) {
-                return '<div class="te-sql-group">'
-                    + '<div class="te-sql-group-head">'
-                    + '<span class="te-sql-group-key">' + escapeHtml(g.key) + '</span>'
+                return '<div class="dm-sql-group">'
+                    + '<div class="dm-sql-group-head">'
+                    + '<span class="dm-sql-group-key">' + escapeHtml(g.key) + '</span>'
                     + '<span class="count-badge">' + g.tables.length + '개</span>'
-                    + '<button class="btn-secondary te-sql-copy">복사</button>'
+                    + '<button class="btn-secondary dm-sql-copy">복사</button>'
                     + '</div>'
-                    + '<textarea class="te-sql-box" readonly></textarea>'
+                    + '<textarea class="dm-sql-box" readonly></textarea>'
                     + '</div>';
             }).join('')
-            : '<div class="te-empty">생성된 이관 SQL이 없습니다(값 입력/대상 확인).</div>';
+            : '<div class="dm-empty">생성된 이관 SQL이 없습니다(값 입력/대상 확인).</div>';
 
         if (notGenRows.length) {
-            html += '<div class="te-sql-group te-nogen-group">'
-                + '<div class="te-sql-group-head">'
-                + '<span class="te-sql-group-key">이관 SQL 미생성 테이블</span>'
+            html += '<div class="dm-sql-group dm-nogen-group">'
+                + '<div class="dm-sql-group-head">'
+                + '<span class="dm-sql-group-key">이관 SQL 미생성 테이블</span>'
                 + '<span class="count-badge">' + notGenRows.length + '개</span>'
                 + '</div>'
-                + '<table class="te-nogen-table"><thead><tr><th>테이블</th><th>사유</th></tr></thead><tbody>'
+                + '<table class="dm-nogen-table"><thead><tr><th>테이블</th><th>사유</th></tr></thead><tbody>'
                 + notGenRows.map(function (r) {
                     return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.reason) + '</td></tr>';
                 }).join('')
@@ -577,9 +577,9 @@
         modalBodyEl.innerHTML = html;
 
         // 그룹 박스: textarea value는 DOM API로 주입(HTML 이스케이프 회피) + 개별 복사
-        var boxes = modalBodyEl.querySelectorAll('.te-sql-group:not(.te-nogen-group) .te-sql-box');
+        var boxes = modalBodyEl.querySelectorAll('.dm-sql-group:not(.dm-nogen-group) .dm-sql-box');
         groups.forEach(function (g, i) { if (boxes[i]) boxes[i].value = g.sql; });
-        modalBodyEl.querySelectorAll('.te-sql-copy').forEach(function (btn, i) {
+        modalBodyEl.querySelectorAll('.dm-sql-copy').forEach(function (btn, i) {
             btn.addEventListener('click', function () {
                 App.copyToClipboard(groups[i].sql, groups[i].key + ' 그룹 SQL이 복사되었습니다.');
             });
@@ -632,8 +632,8 @@
 
     // 이벤트 연결: 생성 버튼 + 모달 닫기/전체복사/배경클릭/Esc
     generateBtn.addEventListener('click', generateSql);
-    container.querySelector('#te-modal-close').addEventListener('click', closeModal);
-    container.querySelector('#te-modal-copy-all').addEventListener('click', function () {
+    container.querySelector('#dm-modal-close').addEventListener('click', closeModal);
+    container.querySelector('#dm-modal-copy-all').addEventListener('click', function () {
         if (!lastSql) { App.showToast('복사할 SQL이 없습니다.'); return; }
         App.copyToClipboard(lastSql, '전체 이관 SQL이 복사되었습니다.');
     });
@@ -643,14 +643,14 @@
     });
     // "전체보기" 버튼들은 renderKeyin()마다 새로 그려지므로 keyinEl에 위임 리스너 하나만 등록.
     keyinEl.addEventListener('click', function (e) {
-        if (e.target.closest('.te-pk-popup-btn')) openPkModal();
-        if (e.target.closest('.te-date-pk-popup-btn')) openDatePkModal();
+        if (e.target.closest('.dm-pk-popup-btn')) openPkModal();
+        if (e.target.closest('.dm-date-pk-popup-btn')) openDatePkModal();
     });
-    container.querySelector('#te-pk-modal-close').addEventListener('click', closePkModal);
+    container.querySelector('#dm-pk-modal-close').addEventListener('click', closePkModal);
     pkModalEl.addEventListener('mousedown', function (e) {
         if (e.target === pkModalEl) closePkModal();
     });
-    container.querySelector('#te-date-pk-modal-close').addEventListener('click', closeDatePkModal);
+    container.querySelector('#dm-date-pk-modal-close').addEventListener('click', closeDatePkModal);
     datePkModalEl.addEventListener('mousedown', function (e) {
         if (e.target === datePkModalEl) closeDatePkModal();
     });
@@ -666,10 +666,10 @@
     // 각 탭(예외 테이블/모듈)은 "서버에서 목록 조회 → 로컬 draft로 편집 → 저장 버튼으로 POST"라는
     // 동일한 구조라 makeListSettingsPanel 팩토리 하나로 만든다. 새 탭을 추가하려면 네비 버튼 +
     // SETTINGS_PANELS에 팩토리 호출 한 줄만 더하면 된다.
-    var settingsBtn = container.querySelector('#te-settings-btn');
-    var settingsModalEl = container.querySelector('#te-settings-modal');
-    var settingsNavEl = container.querySelector('#te-settings-nav');
-    var settingsPanelEl = container.querySelector('#te-settings-panel');
+    var settingsBtn = container.querySelector('#dm-settings-btn');
+    var settingsModalEl = container.querySelector('#dm-settings-modal');
+    var settingsNavEl = container.querySelector('#dm-settings-nav');
+    var settingsPanelEl = container.querySelector('#dm-settings-panel');
 
     var EXCL_DELETE_ICON =
         '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">'
@@ -711,27 +711,27 @@
 
         // 입력칸은 추가(Enter/버튼)뿐 아니라 이미 등록된(draft) 목록 실시간 필터로도 쓴다.
         function renderList() {
-            var listEl = settingsPanelEl.querySelector('.te-excl-list');
+            var listEl = settingsPanelEl.querySelector('.dm-excl-list');
             if (!listEl) return;
 
-            var inputEl = settingsPanelEl.querySelector('.te-excl-input');
+            var inputEl = settingsPanelEl.querySelector('.dm-excl-input');
             var query = inputEl ? inputEl.value.trim().toUpperCase() : '';
             var visible = query
                 ? draft.filter(function (v) { return v.toUpperCase().indexOf(query) !== -1; })
                 : draft;
 
             if (!visible.length) {
-                listEl.innerHTML = '<div class="te-empty" style="grid-column:1/-1;">'
+                listEl.innerHTML = '<div class="dm-empty" style="grid-column:1/-1;">'
                     + (draft.length ? '일치하는 항목이 없습니다.' : '등록된 항목이 없습니다.')
                     + '</div>';
             } else {
                 listEl.innerHTML = visible.map(function (v) {
-                    return '<div class="te-excl-item">'
-                        + '<span class="te-excl-name" title="' + escapeHtml(v) + '">' + escapeHtml(v) + '</span>'
-                        + '<button class="copy-btn te-del-btn" title="삭제" data-name="' + escapeHtml(v) + '">' + EXCL_DELETE_ICON + '</button>'
+                    return '<div class="dm-excl-item">'
+                        + '<span class="dm-excl-name" title="' + escapeHtml(v) + '">' + escapeHtml(v) + '</span>'
+                        + '<button class="copy-btn dm-del-btn" title="삭제" data-name="' + escapeHtml(v) + '">' + EXCL_DELETE_ICON + '</button>'
                         + '</div>';
                 }).join('');
-                listEl.querySelectorAll('.te-del-btn').forEach(function (btn) {
+                listEl.querySelectorAll('.dm-del-btn').forEach(function (btn) {
                     btn.addEventListener('click', function (e) {
                         removeItem(e.currentTarget.getAttribute('data-name'));
                     });
@@ -740,15 +740,15 @@
 
             // 미저장 변경사항 표시 + 저장 버튼 활성화 여부(필터와 무관하게 draft 전체 기준)
             var dirty = isDirty();
-            var hintEl = settingsPanelEl.querySelector('.te-excl-dirty-hint');
-            var saveBtn = settingsPanelEl.querySelector('.te-excl-save');
+            var hintEl = settingsPanelEl.querySelector('.dm-excl-dirty-hint');
+            var saveBtn = settingsPanelEl.querySelector('.dm-excl-save');
             if (hintEl) hintEl.textContent = dirty ? '저장되지 않은 변경사항이 있습니다' : '';
             if (saveBtn) saveBtn.disabled = !dirty;
         }
 
         // 저장 버튼: 작업 사본을 POST로 통째 저장(전체 교체) → 성공하면 서버 응답을 새 확정 상태로 반영.
         async function save() {
-            var saveBtn = settingsPanelEl.querySelector('.te-excl-save');
+            var saveBtn = settingsPanelEl.querySelector('.dm-excl-save');
             if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '저장 중...'; }
             try {
                 var body = {};
@@ -777,48 +777,48 @@
 
         function renderBody() {
             settingsPanelEl.innerHTML = `
-                <div class="te-excl-desc">${opts.desc}</div>
-                <div class="te-excl-add-row">
-                    <input type="text" class="te-excl-input" placeholder="${escapeHtml(opts.placeholder)}" autocomplete="off">
-                    <button class="btn-secondary te-excl-add">추가</button>
+                <div class="dm-excl-desc">${opts.desc}</div>
+                <div class="dm-excl-add-row">
+                    <input type="text" class="dm-excl-input" placeholder="${escapeHtml(opts.placeholder)}" autocomplete="off">
+                    <button class="btn-secondary dm-excl-add">추가</button>
                 </div>
-                <div class="te-excl-list"></div>
-                <div class="te-excl-save-row">
-                    <span class="te-excl-dirty-hint"></span>
-                    <button class="btn-secondary te-excl-save">저장</button>
+                <div class="dm-excl-list"></div>
+                <div class="dm-excl-save-row">
+                    <span class="dm-excl-dirty-hint"></span>
+                    <button class="btn-secondary dm-excl-save">저장</button>
                 </div>
             `;
             renderList();
 
-            var input = settingsPanelEl.querySelector('.te-excl-input');
+            var input = settingsPanelEl.querySelector('.dm-excl-input');
             function tryAdd() {
                 addItem(input.value);
                 input.value = '';
                 input.focus();
                 renderList();   // 입력칸을 비웠으니 필터도 초기화된 전체 목록으로 다시 그린다
             }
-            settingsPanelEl.querySelector('.te-excl-add').addEventListener('click', tryAdd);
+            settingsPanelEl.querySelector('.dm-excl-add').addEventListener('click', tryAdd);
             input.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') tryAdd();
             });
             input.addEventListener('input', renderList);   // 타이핑할 때마다 등록된 목록을 실시간 필터링
-            settingsPanelEl.querySelector('.te-excl-save').addEventListener('click', save);
+            settingsPanelEl.querySelector('.dm-excl-save').addEventListener('click', save);
         }
 
         // 팝업 진입점: 로딩 표시 후 서버에서 최신 목록을 조회해 본문을 그린다.
         return async function renderPanel() {
-            settingsPanelEl.innerHTML = '<div class="te-empty">' + opts.label + ' 목록을 불러오는 중...</div>';
+            settingsPanelEl.innerHTML = '<div class="dm-empty">' + opts.label + ' 목록을 불러오는 중...</div>';
             try {
                 var res = await fetch(opts.endpoint);
                 var data = await res.json();
                 if (!res.ok) {
                     var detail = typeof data.detail === 'string' ? data.detail : '조회 실패';
-                    settingsPanelEl.innerHTML = '<div class="te-keyin-warn">' + opts.label + ' 목록을 불러오지 못했습니다: ' + escapeHtml(detail) + '</div>';
+                    settingsPanelEl.innerHTML = '<div class="dm-keyin-warn">' + opts.label + ' 목록을 불러오지 못했습니다: ' + escapeHtml(detail) + '</div>';
                     return;
                 }
                 committed = data[opts.responseKey] || [];
             } catch (e) {
-                settingsPanelEl.innerHTML = '<div class="te-keyin-warn">' + opts.label + ' 목록 요청 실패: ' + escapeHtml(e.message) + '</div>';
+                settingsPanelEl.innerHTML = '<div class="dm-keyin-warn">' + opts.label + ' 목록 요청 실패: ' + escapeHtml(e.message) + '</div>';
                 return;
             }
             draft = committed.slice();
@@ -829,7 +829,7 @@
     var SETTINGS_PANELS = {
         'excluded-tables': makeListSettingsPanel({
             label: '예외 테이블',
-            endpoint: 'table-extractor/excluded-tables',
+            endpoint: 'data-migration/excluded-tables',
             requestKey: 'tables',
             responseKey: 'tables',
             placeholder: '테이블명 입력 후 Enter',
@@ -838,7 +838,7 @@
         }),
         'excluded-refs': makeListSettingsPanel({
             label: '모듈 예외처리',
-            endpoint: 'table-extractor/excluded-refs',
+            endpoint: 'data-migration/excluded-refs',
             requestKey: 'ids',
             responseKey: 'ids',
             placeholder: 'DBIO/모듈 ID 입력 후 Enter',
@@ -849,14 +849,14 @@
     };
 
     function openSettingsPanel(key) {
-        settingsNavEl.querySelectorAll('.te-settings-nav-item').forEach(function (btn) {
+        settingsNavEl.querySelectorAll('.dm-settings-nav-item').forEach(function (btn) {
             btn.classList.toggle('active', btn.getAttribute('data-panel') === key);
         });
         (SETTINGS_PANELS[key] || function () {})();
     }
 
     function openSettingsModal() {
-        var activeBtn = settingsNavEl.querySelector('.te-settings-nav-item.active') || settingsNavEl.querySelector('.te-settings-nav-item');
+        var activeBtn = settingsNavEl.querySelector('.dm-settings-nav-item.active') || settingsNavEl.querySelector('.dm-settings-nav-item');
         openSettingsPanel(activeBtn ? activeBtn.getAttribute('data-panel') : 'excluded-tables');
         settingsModalEl.style.display = 'flex';
     }
@@ -866,12 +866,12 @@
     }
 
     settingsBtn.addEventListener('click', openSettingsModal);
-    settingsNavEl.querySelectorAll('.te-settings-nav-item').forEach(function (btn) {
+    settingsNavEl.querySelectorAll('.dm-settings-nav-item').forEach(function (btn) {
         btn.addEventListener('click', function () {
             openSettingsPanel(btn.getAttribute('data-panel'));
         });
     });
-    container.querySelector('#te-settings-close').addEventListener('click', closeSettingsModal);
+    container.querySelector('#dm-settings-close').addEventListener('click', closeSettingsModal);
     settingsModalEl.addEventListener('mousedown', function (e) {
         if (e.target === settingsModalEl) closeSettingsModal();
     });
@@ -879,7 +879,7 @@
     // 추출된 전체 테이블의 PK를 1회 조회해 캐시(필터 변경 시엔 서버 재호출 없이 합집합만 재계산)
     async function fetchPks(tables) {
         try {
-            var res = await fetch('table-extractor/pks', {
+            var res = await fetch('data-migration/pks', {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({ tables: tables }),
@@ -907,15 +907,15 @@
     function renderTraceGroup(label, ids) {
         if (!ids || !ids.length) return '';
         return `
-            <div class="te-trace-group">
-                <button type="button" class="te-trace-toggle" aria-expanded="false">
-                    <span class="te-trace-chevron">▶</span>
-                    <span class="te-trace-group-title">${label}</span>
+            <div class="dm-trace-group">
+                <button type="button" class="dm-trace-toggle" aria-expanded="false">
+                    <span class="dm-trace-chevron">▶</span>
+                    <span class="dm-trace-group-title">${label}</span>
                     <span class="count-badge">${ids.length}개</span>
                 </button>
-                <div class="te-trace-list te-trace-list-collapsed">
+                <div class="dm-trace-list dm-trace-list-collapsed">
                     ${ids.map(function (id) {
-                        return '<div class="te-trace-item" title="' + escapeHtml(id) + '">' + escapeHtml(id) + '</div>';
+                        return '<div class="dm-trace-item" title="' + escapeHtml(id) + '">' + escapeHtml(id) + '</div>';
                     }).join('')}
                 </div>
             </div>
@@ -923,12 +923,12 @@
     }
 
     // 배치 추출에서 일부 ID가 실패했을 때(사유 포함) 보여주는 표 — 이관 SQL 모달의
-    // "이관 SQL 미생성 테이블" 표(.te-nogen-table)와 동일한 {ID,사유} 2열 구조를 재사용한다.
+    // "이관 SQL 미생성 테이블" 표(.dm-nogen-table)와 동일한 {ID,사유} 2열 구조를 재사용한다.
     function renderFailedSection(failed) {
         return `
-            <div class="te-failed-section">
-                <div class="te-failed-title">일부 항목 조회 실패 <span class="count-badge">${failed.length}개</span></div>
-                <table class="te-nogen-table"><thead><tr><th>ID</th><th>사유</th></tr></thead><tbody>
+            <div class="dm-failed-section">
+                <div class="dm-failed-title">일부 항목 조회 실패 <span class="count-badge">${failed.length}개</span></div>
+                <table class="dm-nogen-table"><thead><tr><th>ID</th><th>사유</th></tr></thead><tbody>
                     ${failed.map(function (f) {
                         return '<tr><td>' + escapeHtml(f.file_id) + '</td><td>' + escapeHtml(f.error) + '</td></tr>';
                     }).join('')}
@@ -939,7 +939,7 @@
 
     function showAllFailed(failed) {
         resetKeyin();
-        resultEl.innerHTML = '<div class="te-empty">추출된 테이블이 없습니다.</div>' + renderFailedSection(failed);
+        resultEl.innerHTML = '<div class="dm-empty">추출된 테이블이 없습니다.</div>' + renderFailedSection(failed);
     }
 
     function renderTables(tables, batches, dbios, services, bizs, failed) {
@@ -948,11 +948,11 @@
         allMainTables = tables.filter(function (t) { return t.indexOf('FEP') !== 0; });
 
         var fepSection = fepTables.length ? `
-            <div class="te-fep-section">
-                <div class="te-fep-title">FEP 테이블 <span class="count-badge">${fepTables.length}개</span> <span class="te-fep-note">fep 이관 미지원</span></div>
-                <div class="te-fep-list">
+            <div class="dm-fep-section">
+                <div class="dm-fep-title">FEP 테이블 <span class="count-badge">${fepTables.length}개</span> <span class="dm-fep-note">fep 이관 미지원</span></div>
+                <div class="dm-fep-list">
                     ${fepTables.map(function (t) {
-                        return '<div class="te-fep-item" title="' + escapeHtml(t) + '">' + escapeHtml(t) + '</div>';
+                        return '<div class="dm-fep-item" title="' + escapeHtml(t) + '">' + escapeHtml(t) + '</div>';
                     }).join('')}
                 </div>
             </div>
@@ -961,11 +961,11 @@
         // 발견된 batch 참조 — 재귀 중 참조만 되고 소스는 안 들여다본 배치 ID. 발견됐을 때만 칸이 생긴다.
         batches = batches || [];
         var batchSection = batches.length ? `
-            <div class="te-batch-section">
-                <div class="te-batch-title">발견된 batch <span class="count-badge">${batches.length}개</span> <span class="te-batch-note">참조된 배치는 직접 조회 요청. 자동 참조 기능 지원안함</span></div>
-                <div class="te-batch-list">
+            <div class="dm-batch-section">
+                <div class="dm-batch-title">발견된 batch <span class="count-badge">${batches.length}개</span> <span class="dm-batch-note">참조된 배치는 직접 조회 요청. 자동 참조 기능 지원안함</span></div>
+                <div class="dm-batch-list">
                     ${batches.map(function (b) {
-                        return '<div class="te-batch-item" title="' + escapeHtml(b) + '">' + escapeHtml(b) + '</div>';
+                        return '<div class="dm-batch-item" title="' + escapeHtml(b) + '">' + escapeHtml(b) + '</div>';
                     }).join('')}
                 </div>
             </div>
@@ -979,49 +979,49 @@
         // 그룹별로 접혀 있다가 토글을 누르면 목록이 나타난다.
         var traceBody = renderTraceGroup('DBIO', dbios) + renderTraceGroup('Service', services) + renderTraceGroup('Biz', bizs);
         var traceSection = traceBody ? `
-            <div class="te-trace-section">
-                <div class="te-trace-title">추출경로 <span class="te-trace-note">추출 과정에서 경유한 모듈</span></div>
+            <div class="dm-trace-section">
+                <div class="dm-trace-title">추출경로 <span class="dm-trace-note">추출 과정에서 경유한 모듈</span></div>
                 ${traceBody}
             </div>
         ` : '';
 
         resultEl.innerHTML = `
-            <div class="te-prefix-filters">
+            <div class="dm-prefix-filters">
                 ${PREFIXES.map(function (p) {
-                    return '<label><input type="checkbox" class="te-prefix" value="' + p + '"> ' + p + '</label>';
+                    return '<label><input type="checkbox" class="dm-prefix" value="' + p + '"> ' + p + '</label>';
                 }).join('')}
-                <label class="te-held-filter-label"><input type="checkbox" id="te-held-filter"> 보류</label>
-                <input type="text" id="te-filter" class="te-filter-input" placeholder="테이블 필터..." autocomplete="off">
+                <label class="dm-held-filter-label"><input type="checkbox" id="dm-held-filter"> 보류</label>
+                <input type="text" id="dm-filter" class="dm-filter-input" placeholder="테이블 필터..." autocomplete="off">
             </div>
-            <div class="te-result-header">
+            <div class="dm-result-header">
                 <div class="result-title">
                     <span>추출 결과</span>
-                    <span class="count-badge" id="te-count">${allMainTables.length}개</span>
-                    <span class="count-badge te-held-badge" id="te-held-count" style="display:none;"></span>
+                    <span class="count-badge" id="dm-count">${allMainTables.length}개</span>
+                    <span class="count-badge dm-held-badge" id="dm-held-count" style="display:none;"></span>
                 </div>
-                <div class="te-result-actions">
-                    <button class="btn-secondary" id="te-copy-all">전체 복사</button>
+                <div class="dm-result-actions">
+                    <button class="btn-secondary" id="dm-copy-all">전체 복사</button>
                 </div>
             </div>
-            <div class="te-table-list" id="te-table-list"></div>
+            <div class="dm-table-list" id="dm-table-list"></div>
             ${fepSection}
             ${batchSection}
             ${failedSection}
             ${traceSection}
         `;
 
-        var listEl = resultEl.querySelector('#te-table-list');
-        var countEl = resultEl.querySelector('#te-count');
-        var heldCountEl = resultEl.querySelector('#te-held-count');
-        var filterEl = resultEl.querySelector('#te-filter');
-        var heldFilterEl = resultEl.querySelector('#te-held-filter');
+        var listEl = resultEl.querySelector('#dm-table-list');
+        var countEl = resultEl.querySelector('#dm-count');
+        var heldCountEl = resultEl.querySelector('#dm-held-count');
+        var filterEl = resultEl.querySelector('#dm-filter');
+        var heldFilterEl = resultEl.querySelector('#dm-held-filter');
 
         // 현재 UI 상태(텍스트 필터 + 접두사 체크박스 + 보류만 체크박스)를 읽어 매칭 계산
         // (FEP 제외한 메인 목록 대상). 텍스트: 부분일치(AND) / 접두사: 체크된 것 중 하나로
         // 시작(OR), 아무것도 안 체크하면 제약 없음 / 보류만: 체크 시 보류된 테이블만 남김.
         function computeMatches() {
             var q = filterEl.value.trim().toUpperCase();
-            var checked = Array.prototype.slice.call(resultEl.querySelectorAll('.te-prefix:checked'))
+            var checked = Array.prototype.slice.call(resultEl.querySelectorAll('.dm-prefix:checked'))
                                .map(function (c) { return c.value; });
             var heldOnly = heldFilterEl.checked;
             return allMainTables.filter(function (t) {
@@ -1056,30 +1056,30 @@
             }
 
             if (!matches.length) {
-                listEl.innerHTML = '<div class="te-empty" style="grid-column:1/-1;">일치하는 테이블이 없습니다.</div>';
+                listEl.innerHTML = '<div class="dm-empty" style="grid-column:1/-1;">일치하는 테이블이 없습니다.</div>';
                 renderKeyin();
                 return;
             }
             listEl.innerHTML = matches.map(function (t) {
                 var held = heldTables.has(t);
                 return `
-                    <div class="te-table-item${held ? ' te-table-item-held' : ''}">
-                        <span class="te-table-name" title="${escapeHtml(t)}">${escapeHtml(t)}</span>
-                        <span class="te-item-actions">
+                    <div class="dm-table-item${held ? ' dm-table-item-held' : ''}">
+                        <span class="dm-table-name" title="${escapeHtml(t)}">${escapeHtml(t)}</span>
+                        <span class="dm-item-actions">
                             <button class="copy-btn" title="복사" data-table="${escapeHtml(t)}">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke-width="2"></rect>
                                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-width="2"></path>
                                 </svg>
                             </button>
-                            <button class="copy-btn te-hold-btn${held ? ' active' : ''}" title="${held ? '이관 대상으로 복귀' : '이관 보류(보관함에 담아두기)'}" data-table="${escapeHtml(t)}">
+                            <button class="copy-btn dm-hold-btn${held ? ' active' : ''}" title="${held ? '이관 대상으로 복귀' : '이관 보류(보관함에 담아두기)'}" data-table="${escapeHtml(t)}">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <rect x="4" y="8" width="16" height="12" rx="1.5" stroke-width="2"></rect>
                                     <path d="M4 8l3-4h10l3 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
                                     <path d="M10 12.5h4" stroke-width="2" stroke-linecap="round"></path>
                                 </svg>
                             </button>
-                            <button class="copy-btn te-del-btn" title="삭제" data-table="${escapeHtml(t)}">
+                            <button class="copy-btn dm-del-btn" title="삭제" data-table="${escapeHtml(t)}">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
                                 </svg>
@@ -1089,13 +1089,13 @@
                 `;
             }).join('');
             renderKeyin();   // 목록 갱신될 때마다 우측 PK 합집합도 재계산
-            listEl.querySelectorAll('.copy-btn:not(.te-del-btn)').forEach(function (btn) {
+            listEl.querySelectorAll('.copy-btn:not(.dm-del-btn)').forEach(function (btn) {
                 btn.addEventListener('click', function (e) {
                     var name = e.currentTarget.getAttribute('data-table');
                     App.copyToClipboard(name, '"' + name + '" 테이블명이 복사되었습니다.');
                 });
             });
-            listEl.querySelectorAll('.te-hold-btn').forEach(function (btn) {
+            listEl.querySelectorAll('.dm-hold-btn').forEach(function (btn) {
                 btn.addEventListener('click', function (e) {
                     var name = e.currentTarget.getAttribute('data-table');
                     if (heldTables.has(name)) {
@@ -1108,7 +1108,7 @@
                     renderList();
                 });
             });
-            listEl.querySelectorAll('.te-del-btn').forEach(function (btn) {
+            listEl.querySelectorAll('.dm-del-btn').forEach(function (btn) {
                 btn.addEventListener('click', function (e) {
                     var name = e.currentTarget.getAttribute('data-table');
                     var idx = allMainTables.indexOf(name);
@@ -1121,12 +1121,12 @@
         }
 
         filterEl.addEventListener('input', renderList);
-        resultEl.querySelectorAll('.te-prefix').forEach(function (cb) {
+        resultEl.querySelectorAll('.dm-prefix').forEach(function (cb) {
             cb.addEventListener('change', renderList);
         });
         heldFilterEl.addEventListener('change', renderList);
 
-        resultEl.querySelector('#te-copy-all').addEventListener('click', function () {
+        resultEl.querySelector('#dm-copy-all').addEventListener('click', function () {
             if (!visibleTables.length) {
                 App.showToast('복사할 테이블이 없습니다.');
                 return;
@@ -1135,13 +1135,13 @@
         });
 
         // 추출경로: 그룹 제목을 누르면 목록이 펼쳐지고/접힌다 (기본은 접힌 상태).
-        resultEl.querySelectorAll('.te-trace-toggle').forEach(function (btn) {
+        resultEl.querySelectorAll('.dm-trace-toggle').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                var list = btn.parentElement.querySelector('.te-trace-list');
+                var list = btn.parentElement.querySelector('.dm-trace-list');
                 var expanded = btn.getAttribute('aria-expanded') === 'true';
                 btn.setAttribute('aria-expanded', String(!expanded));
-                btn.querySelector('.te-trace-chevron').textContent = expanded ? '▶' : '▼';
-                list.classList.toggle('te-trace-list-collapsed');
+                btn.querySelector('.dm-trace-chevron').textContent = expanded ? '▶' : '▼';
+                list.classList.toggle('dm-trace-list-collapsed');
             });
         });
 
@@ -1183,7 +1183,7 @@
         showSpinner();
 
         try {
-            var res = await fetch('table-extractor/' + encodeURIComponent(idType) + '/extract-batch', {
+            var res = await fetch('data-migration/' + encodeURIComponent(idType) + '/extract-batch', {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({ resource_group: prog || null, file_ids: ids }),

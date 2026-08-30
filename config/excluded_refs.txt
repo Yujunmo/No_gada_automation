@@ -1,9 +1,9 @@
-# Table Extractor 재귀 참조 집계에서 항상 제외할 DBIO/모듈 ID.
+# Data Migration 재귀 참조 집계에서 항상 제외할 DBIO/모듈 ID.
 #
 # 한 줄에 ID 하나. `#` 뒤는 주석. 빈 줄은 무시.
 # service/batch/biz 소스를 재귀적으로 훑다가 "참조로 만나는" ID에만 적용된다 —
-# 여기 있는 ID를 최상위(GET /table-extractor/...)로 직접 요청하면 이 목록과 무관하게 처리된다.
-# 로더: app/tools/table_extractor/excludes.py::load_excluded_refs
+# 여기 있는 ID를 최상위(GET /data-migration/...)로 직접 요청하면 이 목록과 무관하게 처리된다.
+# 로더: app/tools/data_migration/excludes.py::load_excluded_refs
 # 경로를 바꾸려면 NOGADA_EXCLUDED_REFS_PATH 환경변수 사용.
 
 MZPFM_BatchLinkCall  # batch 간접호출용 고정 biz 모듈 — 소스 파일이 없어 항상 SourceNotFound로 skip되므로 미리 제외

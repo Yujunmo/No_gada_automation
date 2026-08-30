@@ -1,12 +1,12 @@
 """
-app/tools/table_extractor/migrate.py 단위 테스트 (순수 함수, DB 무관).
+app/tools/data_migration/migrate.py 단위 테스트 (순수 함수, DB 무관).
 
 DELETE/INSERT 생성 규칙을 고정: 자기 PK만 사용 / 값 이스케이프 / eq·between /
 미입력 컬럼 조건 제외 / 전부 미입력 시 테이블 제외 / PK없음 제외 / dblink 부착.
 """
 from __future__ import annotations
 
-from app.tools.table_extractor.migrate import KeyCond, build_migration_sql
+from app.tools.data_migration.migrate import KeyCond, build_migration_sql
 
 PK = {
     "PFO_STCK_MA": ["mncm_code", "fund_code", "proc_date", "itms_code"],

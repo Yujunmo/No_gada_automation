@@ -1,6 +1,6 @@
 # CLAUDE.md — remote_ssh_server/
 
-이 디렉토리는 `table_extractor`의 원격 파일 가져오기(SFTP)와 Impact Analysis의 원격
+이 디렉토리는 `data_migration`의 원격 파일 가져오기(SFTP)와 Impact Analysis의 원격
 grep(SSH 명령 실행)을 검증하기 위한 **테스트용 SSH+SFTP 서버**다. 실제 회사 서버 프로토콜이
 SFTP(SSH)고 exec(grep)도 지원하므로, 그 접속 경로를 로컬 Docker로 리허설한다.
 **기존 노가다 프로그램(`app/` 등)과 독립** — 여기서는 서버 환경만 다룬다.
@@ -28,7 +28,7 @@ SFTP(SSH)고 exec(grep)도 지원하므로, 그 접속 경로를 로컬 Docker�
 
 사내 프로젝트 구조를 흉내 낸 픽스처다 — 대부분 **0바이트 placeholder 파일 + 빈 디렉토리**고,
 일부만(DBIO XML 25개, 일부 PROG의 serviceModule/batch C 소스) 실제 파싱 가능한 내용을 채워
-`table_extractor`/`refs.py` 검증에 쓴다. `table_extractor`가 원격 소스를 스캔할 때의
+`data_migration`/`refs.py` 검증에 쓴다. `data_migration`가 원격 소스를 스캔할 때의
 **경로·네이밍 규칙**을 리허설하는 용도이므로, 나머지가 비어 있는 건 정상이다.
 
 루트: `truap01dap1/` → `proframe/proframe5.0/`. **두 축**으로 나뉜다.

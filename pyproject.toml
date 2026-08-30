@@ -1,7 +1,7 @@
 [project]
 name = "no-gada"
 version = "0.1.0"
-description = "No_Gada — Oracle 업무 자동화 툴킷 (SQL Bench, Table Extractor)"
+description = "No_Gada — Oracle 업무 자동화 툴킷 (SQL Bench, Data Migration)"
 requires-python = ">=3.9"
 dependencies = [
     "fastapi>=0.110",

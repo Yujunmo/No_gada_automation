@@ -1,7 +1,7 @@
 """load/save_excluded_refs / load/save_excluded_tables 단위 테스트 (설정 파일 읽기·쓰기)."""
 from __future__ import annotations
 
-from app.tools.table_extractor.excludes import (
+from app.tools.data_migration.excludes import (
     load_excluded_refs,
     load_excluded_tables,
     save_excluded_refs,

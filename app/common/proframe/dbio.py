@@ -1,7 +1,7 @@
 """DBIO 원격 리소스 위치 규칙 + 조회.
 
 ID 끝의 2글자 코드(예: DS200의 "DS")가 SQLTYPE 디렉토리를 확정하므로, 후보 디렉토리를
-순회할 필요 없이 경로를 1회에 조합해 읽는다. table_extractor가 먼저 쓰지만 "DBIO ID로
+순회할 필요 없이 경로를 1회에 조합해 읽는다. data_migration이 먼저 쓰지만 "DBIO ID로
 원격 XML 읽기"는 다른 툴(예: Migration Builder)에서도 필요할 범용 ProFrame 동작이라 공용에 둔다.
 """
 from __future__ import annotations
@@ -57,7 +57,7 @@ def dbio_referenced_tables(file_id: str, reader: SourceReader) -> tuple[list[str
     """DBIO ID → XML 조회 → SQL 추출 → 참조 테이블(정렬) + SQL 이어붙임.
 
     read_dbio_xml + dbio_sql.extract_sql + extract_tables를 조합한 공용 파이프라인.
-    table_extractor의 정방향 추출(extract_from_dbio)과 impact_analysis의 역방향 확정
+    data_migration의 정방향 추출(extract_from_dbio)과 impact_analysis의 역방향 확정
     파싱(grep 후보를 실제 파싱으로 검증) 둘 다 이 함수를 공용으로 쓴다.
 
     예외는 그대로 전파한다: SourceNotFound/SourceError(read_dbio_xml → reader.read),

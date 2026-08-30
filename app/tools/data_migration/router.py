@@ -13,17 +13,17 @@ from app.common.parse.sql import ExtractionError
 from app.common.proframe import Module_Type, ResourceGroup
 from app.common.proframe import db_schema
 from app.common.proframe.dbio import UnknownSqlType
-from app.tools.table_extractor import migrate, service
-from app.tools.table_extractor.excludes import (
+from app.tools.data_migration import migrate, service
+from app.tools.data_migration.excludes import (
     load_excluded_refs,
     load_excluded_tables,
     save_excluded_refs,
     save_excluded_tables,
 )
 
-logger = logging.getLogger("no_gada.table_extractor")
+logger = logging.getLogger("no_gada.data_migration")
 
-router = APIRouter(prefix="/table-extractor")
+router = APIRouter(prefix="/data-migration")
 
 
 class ExtractResponse(BaseModel):

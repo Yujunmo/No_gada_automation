@@ -17,7 +17,7 @@ from app.common.proframe.module_source import COMPILE_ROOT, module_path
 from app.common.io.sftp import SourceNotFound, default_reader
 from app.main import app
 from app.common.proframe import dbio_sql
-from app.tools.table_extractor import service
+from app.tools.data_migration import service
 
 FIXTURE_ROOT = (
     Path(__file__).resolve().parents[2]
@@ -335,7 +335,7 @@ def test_extract_no_excluded_tables_file_keeps_all_tables(monkeypatch, tmp_path)
 def test_dbio_extract_success():
     # DBIO는 리소스그룹 없이 2세그먼트 경로로 호출한다(정규 형태).
     _use_files({DS200_PATH: DS200_XML})
-    resp = client.get("/table-extractor/dbio/PFO_STCK_MA_DS200")
+    resp = client.get("/data-migration/dbio/PFO_STCK_MA_DS200")
     assert resp.status_code == 200
     body = resp.json()
     assert body["tables"] == sorted(
@@ -346,7 +346,7 @@ def test_dbio_extract_success():
 
 def test_dbio_extract_execsql_success():
     _use_files({EI901_PATH: EI901_XML})
-    resp = client.get("/table-extractor/dbio/PFO_MNCM_CLCD_HT_EI901")
+    resp = client.get("/data-migration/dbio/PFO_MNCM_CLCD_HT_EI901")
     assert resp.status_code == 200
     assert "PFO_MNCM_CLCD_HT" in resp.json()["tables"]
 
@@ -354,24 +354,24 @@ def test_dbio_extract_execsql_success():
 def test_dbio_extract_three_segment_still_works():
     # 하위호환: resource_group을 준 3세그먼트 경로도 DBIO에서 그대로 동작(값은 무시).
     _use_files({DS200_PATH: DS200_XML})
-    resp = client.get("/table-extractor/dbio/PCSP/PFO_STCK_MA_DS200")
+    resp = client.get("/data-migration/dbio/PCSP/PFO_STCK_MA_DS200")
     assert resp.status_code == 200
     assert resp.json()["dbios"] == ["PFO_STCK_MA_DS200"]
 
 
 def test_dbio_extract_file_not_found_returns_404():
-    resp = client.get("/table-extractor/dbio/PFO_STCK_MA_DS200")
+    resp = client.get("/data-migration/dbio/PFO_STCK_MA_DS200")
     assert resp.status_code == 404
 
 
 def test_dbio_extract_unrecognized_id_pattern_returns_400():
-    resp = client.get("/table-extractor/dbio/SOME_ID")
+    resp = client.get("/data-migration/dbio/SOME_ID")
     assert resp.status_code == 400
 
 
 def test_non_dbio_extract_success_recurses_via_router():
     _use_files(_getbzopdate_files())
-    resp = client.get("/table-extractor/biz/PCOM/MPCOM_GetBzopDate")
+    resp = client.get("/data-migration/biz/PCOM/MPCOM_GetBzopDate")
     assert resp.status_code == 200
     body = resp.json()
     assert body["dbios"] == GETBZOPDATE_DBIO_IDS
@@ -381,40 +381,40 @@ def test_non_dbio_extract_success_recurses_via_router():
 
 def test_non_dbio_without_resource_group_returns_400():
     # DBIO와 달리 service/batch/biz는 최상위 진입 모듈의 업무그룹을 반드시 알아야 한다(2세그먼트 금지).
-    resp = client.get("/table-extractor/biz/MPCOM_GetBzopDate")
+    resp = client.get("/data-migration/biz/MPCOM_GetBzopDate")
     assert resp.status_code == 400
 
 
 def test_non_dbio_top_level_file_not_found_returns_404():
-    resp = client.get("/table-extractor/service/PCSP/SOME_ID")
+    resp = client.get("/data-migration/service/PCSP/SOME_ID")
     assert resp.status_code == 404
 
 
 def test_invalid_prog_rejected():
-    resp = client.get("/table-extractor/dbio/XXXX/SOME_ID")
+    resp = client.get("/data-migration/dbio/XXXX/SOME_ID")
     assert resp.status_code == 422
 
 
 def test_invalid_id_type_rejected():
-    resp = client.get("/table-extractor/bogus/PCSP/SOME_ID")
+    resp = client.get("/data-migration/bogus/PCSP/SOME_ID")
     assert resp.status_code == 422
 
 
 def test_whitespace_only_id_rejected():
-    resp = client.get("/table-extractor/dbio/%20")
+    resp = client.get("/data-migration/dbio/%20")
     assert resp.status_code == 400
 
 
 def test_route_is_get_without_body():
-    resp = client.post("/table-extractor/dbio/PCSP/SOME_ID")
+    resp = client.post("/data-migration/dbio/PCSP/SOME_ID")
     assert resp.status_code == 405
 
 
-# ---- POST /table-extractor/{module_type}/extract-batch (여러 ID 동시 추출) ----
+# ---- POST /data-migration/{module_type}/extract-batch (여러 ID 동시 추출) ----
 
 def test_batch_extract_dbio_success_all():
     _use_files({DS200_PATH: DS200_XML, EI901_PATH: EI901_XML})
-    resp = client.post("/table-extractor/dbio/extract-batch", json={
+    resp = client.post("/data-migration/dbio/extract-batch", json={
         "file_ids": ["PFO_STCK_MA_DS200", "PFO_MNCM_CLCD_HT_EI901"],
     })
     assert resp.status_code == 200
@@ -428,7 +428,7 @@ def test_batch_extract_dbio_success_all():
 
 def test_batch_extract_partial_failure_returns_200_with_failed_list():
     _use_files({DS200_PATH: DS200_XML})
-    resp = client.post("/table-extractor/dbio/extract-batch", json={
+    resp = client.post("/data-migration/dbio/extract-batch", json={
         "file_ids": ["PFO_STCK_MA_DS200", "PFO_MISSING_DS999"],
     })
     assert resp.status_code == 200
@@ -441,7 +441,7 @@ def test_batch_extract_partial_failure_returns_200_with_failed_list():
 
 
 def test_batch_extract_all_fail_still_returns_200():
-    resp = client.post("/table-extractor/dbio/extract-batch", json={
+    resp = client.post("/data-migration/dbio/extract-batch", json={
         "file_ids": ["PFO_MISSING_DS999", "PFO_MISSING_DS998"],
     })
     assert resp.status_code == 200
@@ -452,24 +452,24 @@ def test_batch_extract_all_fail_still_returns_200():
 
 
 def test_batch_extract_empty_list_returns_400():
-    resp = client.post("/table-extractor/dbio/extract-batch", json={"file_ids": []})
+    resp = client.post("/data-migration/dbio/extract-batch", json={"file_ids": []})
     assert resp.status_code == 400
 
 
 def test_batch_extract_whitespace_only_ids_rejected():
-    resp = client.post("/table-extractor/dbio/extract-batch", json={"file_ids": ["  ", ""]})
+    resp = client.post("/data-migration/dbio/extract-batch", json={"file_ids": ["  ", ""]})
     assert resp.status_code == 400
 
 
 def test_batch_extract_exceeds_max_batch_size_returns_400():
-    resp = client.post("/table-extractor/dbio/extract-batch", json={
+    resp = client.post("/data-migration/dbio/extract-batch", json={
         "file_ids": [f"ID_{i}" for i in range(51)],
     })
     assert resp.status_code == 400
 
 
 def test_batch_extract_non_dbio_missing_resource_group_returns_400():
-    resp = client.post("/table-extractor/service/extract-batch", json={
+    resp = client.post("/data-migration/service/extract-batch", json={
         "file_ids": ["SOME_ID"],
     })
     assert resp.status_code == 400
@@ -477,7 +477,7 @@ def test_batch_extract_non_dbio_missing_resource_group_returns_400():
 
 def test_batch_extract_duplicate_ids_deduped():
     _use_files({DS200_PATH: DS200_XML})
-    resp = client.post("/table-extractor/dbio/extract-batch", json={
+    resp = client.post("/data-migration/dbio/extract-batch", json={
         "file_ids": ["PFO_STCK_MA_DS200", "PFO_STCK_MA_DS200", " PFO_STCK_MA_DS200 "],
     })
     assert resp.status_code == 200
@@ -509,7 +509,7 @@ def test_batch_extract_dbios_cross_item_dedup_preserves_order():
     }
     _use_files(files)
 
-    resp = client.post("/table-extractor/service/extract-batch", json={
+    resp = client.post("/data-migration/service/extract-batch", json={
         "resource_group": "PCSP",
         "file_ids": ["SVC_A", "SVC_B"],
     })
@@ -526,7 +526,7 @@ def test_batch_extract_excluded_tables_filter_still_applies_per_item(monkeypatch
     monkeypatch.setenv("NOGADA_EXCLUDED_TABLES_PATH", str(excl_file))
     _use_files({DS200_PATH: DS200_XML})
 
-    resp = client.post("/table-extractor/dbio/extract-batch", json={
+    resp = client.post("/data-migration/dbio/extract-batch", json={
         "file_ids": ["PFO_STCK_MA_DS200"],
     })
     assert resp.status_code == 200
@@ -535,7 +535,7 @@ def test_batch_extract_excluded_tables_filter_still_applies_per_item(monkeypatch
     assert "PFO_STCK_MA" in body["tables"]
 
 
-# ---- POST /table-extractor/pks (PK 컬럼 조회) ----
+# ---- POST /data-migration/pks (PK 컬럼 조회) ----
 
 PK_ROWS = [
     {"table_id": "PFO_STCK_MA", "pk_column": "mncm_code"},
@@ -567,7 +567,7 @@ def _use_db(db) -> None:
 
 def test_pks_success_groups_by_table():
     _use_db(FakeDb(PK_ROWS))
-    resp = client.post("/table-extractor/pks", json={"tables": ["PFO_STCK_MA", "PFO_FUND_BS"]})
+    resp = client.post("/data-migration/pks", json={"tables": ["PFO_STCK_MA", "PFO_FUND_BS"]})
     assert resp.status_code == 200
     assert resp.json()["pks"] == {
         "PFO_STCK_MA": ["mncm_code", "fund_code", "proc_date", "itms_code"],
@@ -577,34 +577,34 @@ def test_pks_success_groups_by_table():
 
 def test_pks_unknown_table_included_as_empty():
     _use_db(FakeDb(PK_ROWS))
-    resp = client.post("/table-extractor/pks", json={"tables": ["PFO_STCK_MA", "ZZZ"]})
+    resp = client.post("/data-migration/pks", json={"tables": ["PFO_STCK_MA", "ZZZ"]})
     assert resp.status_code == 200
     assert resp.json()["pks"]["ZZZ"] == []
 
 
 def test_pks_empty_list_returns_empty_map():
     _use_db(FakeDb(PK_ROWS))
-    resp = client.post("/table-extractor/pks", json={"tables": []})
+    resp = client.post("/data-migration/pks", json={"tables": []})
     assert resp.status_code == 200
     assert resp.json()["pks"] == {}
 
 
 def test_pks_db_error_returns_503():
     _use_db(BrokenDb())
-    resp = client.post("/table-extractor/pks", json={"tables": ["PFO_STCK_MA"]})
+    resp = client.post("/data-migration/pks", json={"tables": ["PFO_STCK_MA"]})
     assert resp.status_code == 503
 
 
 def test_pks_missing_body_field_rejected():
-    resp = client.post("/table-extractor/pks", json={})
+    resp = client.post("/data-migration/pks", json={})
     assert resp.status_code == 422
 
 
-# ---- POST /table-extractor/migrate-sql (DELETE/INSERT 생성) ----
+# ---- POST /data-migration/migrate-sql (DELETE/INSERT 생성) ----
 
 def test_migrate_sql_generates_delete_insert():
     _use_db(FakeDb(PK_ROWS))
-    resp = client.post("/table-extractor/migrate-sql", json={
+    resp = client.post("/data-migration/migrate-sql", json={
         "tables": ["PFO_STCK_MA"],
         "from_link": "SRC",
         "to_link": "TGT",
@@ -629,7 +629,7 @@ def test_migrate_sql_generates_delete_insert():
 
 def test_migrate_sql_lowercase_table_normalized():
     _use_db(FakeDb(PK_ROWS))
-    resp = client.post("/table-extractor/migrate-sql", json={
+    resp = client.post("/data-migration/migrate-sql", json={
         "tables": ["pfo_stck_ma"],
         "keys": {"mncm_code": {"op": "eq", "value": "M1"}},
     })
@@ -640,13 +640,13 @@ def test_migrate_sql_lowercase_table_normalized():
 
 def test_migrate_sql_db_error_returns_503():
     _use_db(BrokenDb())
-    resp = client.post("/table-extractor/migrate-sql", json={
+    resp = client.post("/data-migration/migrate-sql", json={
         "tables": ["PFO_STCK_MA"], "keys": {"mncm_code": {"value": "M1"}},
     })
     assert resp.status_code == 503
 
 
-# ---- GET/POST /table-extractor/excluded-tables, /excluded-refs (설정 팝업: 조회/저장) ----
+# ---- GET/POST /data-migration/excluded-tables, /excluded-refs (설정 팝업: 조회/저장) ----
 
 @pytest.fixture(autouse=True)
 def _excluded_tables_tmp_path(monkeypatch, tmp_path):
@@ -657,67 +657,67 @@ def _excluded_tables_tmp_path(monkeypatch, tmp_path):
 
 
 def test_get_excluded_tables_empty_when_unset():
-    resp = client.get("/table-extractor/excluded-tables")
+    resp = client.get("/data-migration/excluded-tables")
     assert resp.status_code == 200
     assert resp.json()["tables"] == []
 
 
 def test_post_excluded_tables_saves_and_returns_normalized():
-    resp = client.post("/table-extractor/excluded-tables", json={"tables": ["pfo_a", "PFO_B", "pfo_a"]})
+    resp = client.post("/data-migration/excluded-tables", json={"tables": ["pfo_a", "PFO_B", "pfo_a"]})
     assert resp.status_code == 200
     assert resp.json()["tables"] == ["PFO_A", "PFO_B"]
 
 
 def test_get_excluded_tables_reflects_previous_save():
-    client.post("/table-extractor/excluded-tables", json={"tables": ["FOO", "BAR"]})
-    resp = client.get("/table-extractor/excluded-tables")
+    client.post("/data-migration/excluded-tables", json={"tables": ["FOO", "BAR"]})
+    resp = client.get("/data-migration/excluded-tables")
     assert resp.status_code == 200
     assert resp.json()["tables"] == ["BAR", "FOO"]
 
 
 def test_post_excluded_tables_empty_list_clears_saved():
-    client.post("/table-extractor/excluded-tables", json={"tables": ["FOO"]})
-    resp = client.post("/table-extractor/excluded-tables", json={"tables": []})
+    client.post("/data-migration/excluded-tables", json={"tables": ["FOO"]})
+    resp = client.post("/data-migration/excluded-tables", json={"tables": []})
     assert resp.status_code == 200
     assert resp.json()["tables"] == []
-    assert client.get("/table-extractor/excluded-tables").json()["tables"] == []
+    assert client.get("/data-migration/excluded-tables").json()["tables"] == []
 
 
 def test_post_excluded_tables_missing_body_field_rejected():
-    resp = client.post("/table-extractor/excluded-tables", json={})
+    resp = client.post("/data-migration/excluded-tables", json={})
     assert resp.status_code == 422
 
 
-# ---- GET/POST /table-extractor/excluded-refs (설정 팝업: 모듈 예외처리 조회/저장) ----
+# ---- GET/POST /data-migration/excluded-refs (설정 팝업: 모듈 예외처리 조회/저장) ----
 
 def test_get_excluded_refs_empty_when_unset():
-    resp = client.get("/table-extractor/excluded-refs")
+    resp = client.get("/data-migration/excluded-refs")
     assert resp.status_code == 200
     assert resp.json()["ids"] == []
 
 
 def test_post_excluded_refs_saves_and_preserves_case():
     # 테이블명과 달리 ID는 대문자로 정규화하지 않는다(재귀 매칭이 대소문자 구분).
-    resp = client.post("/table-extractor/excluded-refs", json={"ids": ["MZCOM_DeadBiz", "PFO_LEGACY_MA_DS999"]})
+    resp = client.post("/data-migration/excluded-refs", json={"ids": ["MZCOM_DeadBiz", "PFO_LEGACY_MA_DS999"]})
     assert resp.status_code == 200
     assert resp.json()["ids"] == ["MZCOM_DeadBiz", "PFO_LEGACY_MA_DS999"]
 
 
 def test_get_excluded_refs_reflects_previous_save():
-    client.post("/table-extractor/excluded-refs", json={"ids": ["FooId", "BarId"]})
-    resp = client.get("/table-extractor/excluded-refs")
+    client.post("/data-migration/excluded-refs", json={"ids": ["FooId", "BarId"]})
+    resp = client.get("/data-migration/excluded-refs")
     assert resp.status_code == 200
     assert resp.json()["ids"] == ["BarId", "FooId"]
 
 
 def test_post_excluded_refs_empty_list_clears_saved():
-    client.post("/table-extractor/excluded-refs", json={"ids": ["FooId"]})
-    resp = client.post("/table-extractor/excluded-refs", json={"ids": []})
+    client.post("/data-migration/excluded-refs", json={"ids": ["FooId"]})
+    resp = client.post("/data-migration/excluded-refs", json={"ids": []})
     assert resp.status_code == 200
     assert resp.json()["ids"] == []
-    assert client.get("/table-extractor/excluded-refs").json()["ids"] == []
+    assert client.get("/data-migration/excluded-refs").json()["ids"] == []
 
 
 def test_post_excluded_refs_missing_body_field_rejected():
-    resp = client.post("/table-extractor/excluded-refs", json={})
+    resp = client.post("/data-migration/excluded-refs", json={})
     assert resp.status_code == 422

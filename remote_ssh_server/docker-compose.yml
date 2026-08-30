@@ -1,6 +1,6 @@
 # 테스트용 SSH+SFTP 원격 서버 (개발/검증 전용)
 #
-# table_extractor의 원격 파일 가져오기(SFTP) + Impact Analysis의 원격 grep(SSH 명령 실행)을
+# data_migration의 원격 파일 가져오기(SFTP) + Impact Analysis의 원격 grep(SSH 명령 실행)을
 # 로컬 Docker 하나로 리허설한다. 실제 회사 서버 프로토콜이 SFTP(SSH)고 exec(grep)도 되므로
 # 이 이미지 하나로 두 경로를 다 검증할 수 있다(과거엔 SFTP 전용 atmoz/sftp 이미지를 별도
 # 서버로 뒀었지만, exec가 안 돼 grep 경로를 실측할 수 없어 이 서버로 통합했다).

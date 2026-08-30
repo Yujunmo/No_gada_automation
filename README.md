@@ -9,7 +9,7 @@
 | 도구 | 기능 | 상태 |
 |------|------|------|
 | **SQL Bench** | 붙여넣은 Oracle SQL → 참조 물리 테이블 추출 | 구현됨 |
-| **Table Extractor** | module_type(dbio/service/batch/biz) ID → 원격지(SFTP) 소스 재귀 탐색 → 참조 테이블 추출 → PK 조회 → 이관 DELETE/INSERT 생성 | 구현됨 |
+| **Data Migration** | module_type(dbio/service/batch/biz) ID → 원격지(SFTP) 소스 재귀 탐색 → 참조 테이블 추출 → PK 조회 → 이관 DELETE/INSERT 생성 | 구현됨 |
 | Impact Analysis | 영향도 분석 | 자리만 확보(준비 중) |
 
 - **테이블 추출 파서**: sqlglot (`dialect="oracle"`) — DB 접속 없이 텍스트 파싱.
@@ -44,7 +44,7 @@ pytest
 pytest tests/tools/test_migrate.py -k group   # 단일 파일/필터 예시
 ```
 
-**Table Extractor 수동 검증용 로컬 서버**(Docker) — 브라우저/`curl` 확인 시에만 필요, `pytest`엔 불필요:
+**Data Migration 수동 검증용 로컬 서버**(Docker) — 브라우저/`curl` 확인 시에만 필요, `pytest`엔 불필요:
 
 ```bash
 (cd remote_ssh_server && docker compose up -d --build)  # SSH+SFTP 127.0.0.1:2222  testuser/testpass
@@ -59,7 +59,7 @@ pip install -e ".[oracle]"                          # oracledb 드라이버(기�
 ## 처리 파이프라인
 
 ### 공용 테이블 추출 — `app/common/parse/sql.py` `extract_tables(sql) -> list[str]`
-`sql_bench`와 `table_extractor`가 공유하는 상태 없는 함수.
+`sql_bench`와 `data_migration`가 공유하는 상태 없는 함수.
 
 ```
 원본 SQL
@@ -73,14 +73,14 @@ pip install -e ".[oracle]"                          # oracledb 드라이버(기�
 
 - **SQL Bench**: 붙여넣은 SQL → `extract_tables`. `POST /sql-bench/extract` (1MB 초과 413, 파싱 오류 400).
 
-### Table Extractor — module ID → 이관 SQL
+### Data Migration — module ID → 이관 SQL
 식별자(DBIO ID, 또는 Service/Batch/Biz의 module_type+resource_group+ID)로 원격 파일을 찾아
 읽고, 참조를 재귀적으로 따라가며 도달한 모든 DBIO의 SQL에서 테이블을 뽑아 이관 DELETE/INSERT까지
 만든다.
 
 ```
-GET /table-extractor/{module_type}/{file_id}                    # dbio (resource_group 없음, 리프)
-GET /table-extractor/{module_type}/{resource_group}/{file_id}    # service/batch/biz (재귀)
+GET /data-migration/{module_type}/{file_id}                    # dbio (resource_group 없음, 리프)
+GET /data-migration/{module_type}/{resource_group}/{file_id}    # service/batch/biz (재귀)
   dbio:
     ↓ dbio.read_dbio_xml()   ID 끝 2글자로 SQLTYPE 검증 → release/dbio/xml/<ID>.xml (SFTP, 평면 배치)
     ↓ dbio_sql.extract_sql()   published XML의 <sqlString> 수집
@@ -95,10 +95,10 @@ GET /table-extractor/{module_type}/{resource_group}/{file_id}    # service/batch
   → {tables, sql, dbios, batches, services, bizs}
     (프론트: 텍스트·접두사 필터·삭제로 대상 좁힘 = 이관 대상. dbios/services/bizs는 "추출경로" 토글로 표시)
 
-POST /table-extractor/pks        {tables} → {테이블: [PK컬럼]}   (all_tables 1회 조회, 캐시)
+POST /data-migration/pks        {tables} → {테이블: [PK컬럼]}   (all_tables 1회 조회, 캐시)
   → 프론트: 대상들의 PK 합집합으로 키 입력란 표시(컬럼명이 date로 끝나면 단일/기간 토글)
 
-POST /table-extractor/migrate-sql  {tables, from_link, to_link, keys} → {sql, generated, skipped, no_pk, groups}
+POST /data-migration/migrate-sql  {tables, from_link, to_link, keys} → {sql, generated, skipped, no_pk, groups}
   라우터 → service.migrate_sql(정규화 + PK 조회) → migrate.build_migration_sql(순수 함수)
   = 테이블마다  DELETE FROM t@<TO> WHERE ...;  INSERT INTO t@<TO> SELECT * FROM t@<FROM> WHERE ...;
   → 프론트: 접미사 그룹(_BS/_HT/_MA/_SM/_TR/기타)별 박스로 팝업 표시, 미생성 테이블은 사유와 함께 표로
@@ -125,7 +125,7 @@ POST /table-extractor/migrate-sql  {tables, from_link, to_link, keys} → {sql, 
 │   │   └── proframe/db_schema.py   #   fetch_pk_columns (all_tables → 테이블별 PK 컬럼)
 │   ├── tools/
 │   │   ├── sql_bench/router.py     # SQL 텍스트 → 테이블
-│   │   └── table_extractor/        # 라우터 / 오케스트레이션 / 파서 / 이관 SQL 생성(순수)
+│   │   └── data_migration/        # 라우터 / 오케스트레이션 / 파서 / 이관 SQL 생성(순수)
 │   │       ├── router.py  service.py  dbio_sql.py  migrate.py
 │   │       ├── refs.py             #   scan_module_refs (.c 소스 → 참조 dbio/biz/service/batch ID)
 │   │       └── excludes.py         #   load_excluded_refs (재귀 참조 항상-제외 ID 목록)
@@ -135,7 +135,7 @@ POST /table-extractor/migrate-sql  {tables, from_link, to_link, keys} → {sql, 
 │       └── css/ , tools/<tool>/    #   공용/툴별 스타일·스크립트
 ├── tests/
 │   ├── common/                     # test_text_sanitize / test_sql / test_csource / test_db / test_schema / test_module_src
-│   └── tools/                      # test_sql_bench / test_table_extractor / test_migrate / test_refs / test_excludes
+│   └── tools/                      # test_sql_bench / test_data_migration / test_migrate / test_refs / test_excludes
 ├── config/
 │   ├── excluded_refs.txt           # 재귀 참조 집계에서 항상 제외할 ID 목록(한 줄에 하나, # 주석)
 │   └── module_group_map.txt        # 재귀 중 참조 ID → 업무그룹 사전 매핑(find 폴백 가속용)

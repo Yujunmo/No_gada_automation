@@ -1,6 +1,6 @@
 """COMPILE_ROOT 전체를 훑어 config/module_group_map.txt를 재생성한다.
 
-table_extractor의 재귀 추출이 service/biz 참조를 만날 때마다 업무그룹을 몰라 최대
+data_migration의 재귀 추출이 service/biz 참조를 만날 때마다 업무그룹을 몰라 최대
 30회까지 순차 탐색(find 폴백)하는 비용을 줄이기 위한 사전 매핑을 만든다. 요청 경로가
 아니라 이 스크립트를 통해 오프라인으로 실행한다 — 업무그룹마다 디렉터리를 통째로
 listdir하므로 무겁다.

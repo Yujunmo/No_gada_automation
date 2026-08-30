@@ -1,9 +1,9 @@
-"""Table Extractor의 "항상 제외" 목록 2종 (둘 다 설정 파일 기반, 형식은 동일, 조회+저장 모두 지원).
+"""Data Migration의 "항상 제외" 목록 2종 (둘 다 설정 파일 기반, 형식은 동일, 조회+저장 모두 지원).
 
 1. 재귀 참조 제외(load_excluded_refs/save_excluded_refs): service.extract_from_module이
    소스를 재귀적으로 훑다가 "만나는" DBIO/모듈 ID 참조를 거른다(dbio/biz/service/batch
-   타입 무관 — ID 하나로 통일 체크). 최상위(GET /table-extractor/...)로 직접 요청된 ID는
-   이 목록과 무관하게 항상 처리된다. Table Extractor 설정 팝업의 "모듈 예외처리" 탭이
+   타입 무관 — ID 하나로 통일 체크). 최상위(GET /data-migration/...)로 직접 요청된 ID는
+   이 목록과 무관하게 항상 처리된다. Data Migration 설정 팝업의 "모듈 예외처리" 탭이
    save_excluded_refs로 저장한다.
 2. 테이블 제외(load_excluded_tables/save_excluded_tables): service.extract()가 최종적으로
    return하는 tables 목록에서 항상 제외할 물리 테이블명. 재귀 탐색 중 만나는 참조가 아니라
@@ -23,7 +23,7 @@ import logging
 import os
 from typing import Iterable
 
-logger = logging.getLogger("no_gada.table_extractor")
+logger = logging.getLogger("no_gada.data_migration")
 
 DEFAULT_EXCLUDED_REFS_PATH = "config/excluded_refs.txt"
 DEFAULT_EXCLUDED_TABLES_PATH = "config/excluded_tables.txt"
