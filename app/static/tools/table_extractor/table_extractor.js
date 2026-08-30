@@ -83,6 +83,34 @@
                 </div>
             </div>
         </div>
+
+        <div id="te-pk-modal" class="te-modal-overlay" style="display:none;">
+            <div class="te-modal te-pk-modal" role="dialog" aria-modal="true">
+                <div class="te-modal-head">
+                    <span class="te-modal-title">일반 PK 키 입력</span>
+                    <div class="te-modal-head-actions">
+                        <button id="te-pk-modal-close" class="te-modal-x" title="닫기" aria-label="닫기">&times;</button>
+                    </div>
+                </div>
+                <div id="te-pk-modal-body" class="te-modal-body">
+                    <div class="te-keyin-fields" id="te-pk-modal-fields"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="te-date-pk-modal" class="te-modal-overlay" style="display:none;">
+            <div class="te-modal te-pk-modal" role="dialog" aria-modal="true">
+                <div class="te-modal-head">
+                    <span class="te-modal-title">날짜 PK 키 입력</span>
+                    <div class="te-modal-head-actions">
+                        <button id="te-date-pk-modal-close" class="te-modal-x" title="닫기" aria-label="닫기">&times;</button>
+                    </div>
+                </div>
+                <div id="te-date-pk-modal-body" class="te-modal-body">
+                    <div class="te-keyin-fields" id="te-date-pk-modal-fields"></div>
+                </div>
+            </div>
+        </div>
     `;
 
     var typeSel = container.querySelector('#te-id-type');
@@ -93,6 +121,10 @@
     var generateBtn = container.querySelector('#te-generate');
     var modalEl = container.querySelector('#te-modal');
     var modalBodyEl = container.querySelector('#te-modal-body');
+    var pkModalEl = container.querySelector('#te-pk-modal');
+    var pkModalFieldsEl = container.querySelector('#te-pk-modal-fields');
+    var datePkModalEl = container.querySelector('#te-date-pk-modal');
+    var datePkModalFieldsEl = container.querySelector('#te-date-pk-modal-fields');
     var lastSql = '';   // '전체 복사'용 전체 SQL 캐시
     var PLACEHOLDER = {
         dbio: 'DBIO ID를 입력하세요 (여러 개는 쉼표로 구분해 입력하세요)',
@@ -169,10 +201,14 @@
 
     // 좌(목록)/우(키 입력) 패널이 공유하는 상태 — 추출마다 초기화된다.
     var allMainTables = [];              // FEP 제외한 메인 목록(삭제 반영)
-    var visibleTables = [];              // 현재 필터로 보이는(=이관 대상) 테이블. 필터 결과가 곧 대상.
+    var visibleTables = [];              // 현재 필터로 보이는(=이관 대상) 테이블. 평소엔 보류 테이블을 제외하지만
+                                          // "보류만" 필터가 켜져 있으면 보류 테이블 자체가 대상이 된다.
+    var heldTables = new Set();          // 보류중인 테이블명 — 목록엔 남지만 (보류만 필터 아닌 한) 이관 대상에서는 빠짐
     var pkMap = {};                      // {테이블: [PK컬럼]} — /pks 응답 캐시
     var pkLoaded = false;               // /pks 응답 도착 여부
     var keyinState = {};                 // {컬럼: {isDate, mode, value|single|from|to}} — 키 입력 값·모드 보존
+    var lastNormalCols = [];             // 마지막 renderKeyin()이 계산한 일반 PK 컬럼 목록 — 팝업이 이걸로 필드를 그림
+    var lastDateCols = [];               // 마지막 renderKeyin()이 계산한 날짜 PK 컬럼 목록 — 날짜 PK 팝업용
 
     var ERROR_TITLE = {
         400: '요청 오류',
@@ -211,9 +247,12 @@
     function resetKeyin() {
         allMainTables = [];
         visibleTables = [];
+        heldTables = new Set();
         pkMap = {};
         pkLoaded = false;
         keyinState = {};
+        lastNormalCols = [];
+        lastDateCols = [];
         keyinEl.innerHTML = '<div class="te-keyin-box"><div class="te-empty">테이블을 추출하면 PK 입력란이 표시됩니다.</div></div>';
     }
 
@@ -332,12 +371,17 @@
         // 일반 PK와 날짜 PK를 각각 독립 스크롤 박스로 분리 표시. 일반 PK는 PK_PRIORITY 순서 우선.
         var normalCols = sortByPkPriority(union.filter(function (c) { return !isDateColumn(c); }));
         var dateCols = union.filter(isDateColumn);
+        lastNormalCols = normalCols;   // 팝업이 열릴 때 이 스냅샷으로 필드를 그린다
+        lastDateCols = dateCols;
+
+        var pkPopupBtn = '<button type="button" class="te-pk-popup-btn btn-secondary">전체보기</button>';
+        var datePkPopupBtn = '<button type="button" class="te-date-pk-popup-btn btn-secondary">전체보기</button>';
 
         keyinEl.innerHTML =
             '<div class="te-keyin-head">PK 키 입력 <span class="count-badge">대상 ' + sel.length + '개 · PK ' + union.length + '개</span></div>'
             + '<div class="te-keyin-boxes">'
-            + renderKeyinBox('일반 PK', normalCols, '키값 다 채울 필요 없음. 쉼표로 구분하여 복수건의 키값 입력시 in절로 작성됨')
-            + renderKeyinBox('날짜 PK', dateCols)
+            + renderKeyinBox('일반 PK', normalCols, '키값 다 채울 필요 없음. 쉼표로 구분하여 복수건의 키값 입력시 in절로 작성됨', pkPopupBtn)
+            + renderKeyinBox('날짜 PK', dateCols, null, datePkPopupBtn)
             + '</div>'
             + (missing.length
                 ? '<div class="te-keyin-note">PK 정보 없는 테이블: ' + escapeHtml(missing.join(', ')) + '</div>'
@@ -348,11 +392,13 @@
 
     // 일반/날짜 PK 박스 하나(제목 + 필드 그리드, 자체 스크롤) 렌더. 컬럼이 없으면 박스 자체를 생략.
     // note는 제목 오른쪽에 붙는 보조 안내문(일반 PK의 "여러 개는 쉼표로 구분" 힌트 등, 선택).
-    function renderKeyinBox(title, cols, note) {
+    // popupBtnHtml은 제목 줄에 끼워 넣을 버튼(현재 "일반 PK"만 "전체보기" 팝업 버튼을 전달, 선택).
+    function renderKeyinBox(title, cols, note, popupBtnHtml) {
         if (!cols.length) return '';
         return '<div class="te-keyin-box">'
             + '<div class="te-keyin-section-title">' + escapeHtml(title) + ' <span class="count-badge">' + cols.length + '개</span>'
             + (note ? ' <span class="te-keyin-section-note">' + escapeHtml(note) + '</span>' : '')
+            + (popupBtnHtml || '')
             + '</div>'
             + '<div class="te-keyin-fields">'
             + cols.map(renderKeyinField).join('')
@@ -381,10 +427,10 @@
         var inputs = st.mode === 'range'
             ? '<span class="te-keyin-range">'
                 + '<input type="text" class="te-keyin-input" data-role="from" data-pk="' + escapeHtml(col) + '"'
-                + ' inputmode="numeric" maxlength="8" value="' + escapeHtml(st.from) + '" placeholder="시작 YYYYMMDD">'
+                + ' inputmode="numeric" maxlength="8" value="' + escapeHtml(st.from) + '" placeholder="YYYYMMDD">'
                 + '<span class="te-range-sep">~</span>'
                 + '<input type="text" class="te-keyin-input" data-role="to" data-pk="' + escapeHtml(col) + '"'
-                + ' inputmode="numeric" maxlength="8" value="' + escapeHtml(st.to) + '" placeholder="종료 YYYYMMDD">'
+                + ' inputmode="numeric" maxlength="8" value="' + escapeHtml(st.to) + '" placeholder="YYYYMMDD">'
                 + '</span>'
             : '<input type="text" class="te-keyin-input" data-role="single" data-pk="' + escapeHtml(col) + '"'
                 + ' inputmode="numeric" maxlength="8" value="' + escapeHtml(st.single) + '" placeholder="YYYYMMDD">';
@@ -396,8 +442,13 @@
     }
 
     // 입력/토글 이벤트를 keyinState에 라이브 반영(재렌더에도 값 유지). renderKeyin 뒤에 매번 호출.
-    function bindKeyinEvents() {
-        keyinEl.querySelectorAll('.te-keyin-input').forEach(function (inp) {
+    // root를 생략하면 인라인 박스(keyinEl) 기준 — PK 팝업 필드 그리드에도 그대로 재사용한다.
+    // onModeChange: 날짜 PK [단일|기간] 토글 후 무엇을 다시 그릴지(기본은 인라인 박스 전체
+    // renderKeyin() — 날짜 PK 팝업 안에서 토글할 땐 팝업 자신의 재렌더 함수를 넘겨받는다).
+    function bindKeyinEvents(root, onModeChange) {
+        root = root || keyinEl;
+        onModeChange = onModeChange || renderKeyin;
+        root.querySelectorAll('.te-keyin-input').forEach(function (inp) {
             inp.addEventListener('input', function (e) {
                 var st = ensureKeyinState(e.currentTarget.getAttribute('data-pk'));
                 var role = e.currentTarget.getAttribute('data-role');
@@ -410,11 +461,11 @@
                 }
             });
         });
-        keyinEl.querySelectorAll('.te-mode-btn').forEach(function (btn) {
+        root.querySelectorAll('.te-mode-btn').forEach(function (btn) {
             btn.addEventListener('click', function (e) {
                 var col = e.currentTarget.closest('.te-keyin-toggle').getAttribute('data-pk');
                 ensureKeyinState(col).mode = e.currentTarget.getAttribute('data-mode');
-                renderKeyin();   // 모드 전환 → 입력란 재구성
+                onModeChange();   // 모드 전환 → 입력란 재구성(현재 보고 있는 화면 기준)
             });
         });
     }
@@ -545,6 +596,40 @@
         modalEl.style.display = 'none';
     }
 
+    // 일반 PK 팝업: PK 컬럼이 많아 인라인 박스 스크롤이 불편할 때 넓은 화면에서 입력할 수 있게.
+    // 모달이 열려있는 동안은 배경(인라인 박스)을 조작할 수 없으므로 실시간 동기화는 필요 없다 —
+    // 열 때 스냅샷(lastNormalCols)으로 새로 그리고, 닫을 때 renderKeyin()으로 인라인에 반영한다.
+    function openPkModal() {
+        if (!lastNormalCols.length) return;
+        pkModalFieldsEl.innerHTML = lastNormalCols.map(renderKeyinField).join('');
+        bindKeyinEvents(pkModalFieldsEl);
+        pkModalEl.style.display = 'flex';
+    }
+
+    function closePkModal() {
+        pkModalEl.style.display = 'none';
+        renderKeyin();   // 팝업에서 바뀐 값을 인라인 박스에도 반영
+    }
+
+    // 날짜 PK 팝업: 일반 PK 팝업과 같은 동기화 전략(열 때 스냅샷, 닫을 때 renderKeyin()).
+    // 다만 날짜 필드는 [단일|기간] 토글이 있어 토글 클릭 시 팝업 자신을 다시 그려야 한다 —
+    // renderDatePkModalFields를 bindKeyinEvents의 onModeChange로 그대로 넘겨 재귀적으로 재바인딩.
+    function renderDatePkModalFields() {
+        datePkModalFieldsEl.innerHTML = lastDateCols.map(renderKeyinField).join('');
+        bindKeyinEvents(datePkModalFieldsEl, renderDatePkModalFields);
+    }
+
+    function openDatePkModal() {
+        if (!lastDateCols.length) return;
+        renderDatePkModalFields();
+        datePkModalEl.style.display = 'flex';
+    }
+
+    function closeDatePkModal() {
+        datePkModalEl.style.display = 'none';
+        renderKeyin();   // 팝업에서 바뀐 값을 인라인 박스에도 반영
+    }
+
     // 이벤트 연결: 생성 버튼 + 모달 닫기/전체복사/배경클릭/Esc
     generateBtn.addEventListener('click', generateSql);
     container.querySelector('#te-modal-close').addEventListener('click', closeModal);
@@ -556,10 +641,25 @@
     modalEl.addEventListener('mousedown', function (e) {
         if (e.target === modalEl) closeModal();
     });
+    // "전체보기" 버튼들은 renderKeyin()마다 새로 그려지므로 keyinEl에 위임 리스너 하나만 등록.
+    keyinEl.addEventListener('click', function (e) {
+        if (e.target.closest('.te-pk-popup-btn')) openPkModal();
+        if (e.target.closest('.te-date-pk-popup-btn')) openDatePkModal();
+    });
+    container.querySelector('#te-pk-modal-close').addEventListener('click', closePkModal);
+    pkModalEl.addEventListener('mousedown', function (e) {
+        if (e.target === pkModalEl) closePkModal();
+    });
+    container.querySelector('#te-date-pk-modal-close').addEventListener('click', closeDatePkModal);
+    datePkModalEl.addEventListener('mousedown', function (e) {
+        if (e.target === datePkModalEl) closeDatePkModal();
+    });
     document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;
         if (modalEl.style.display !== 'none') closeModal();
         if (settingsModalEl.style.display !== 'none') closeSettingsModal();
+        if (pkModalEl.style.display !== 'none') closePkModal();
+        if (datePkModalEl.style.display !== 'none') closeDatePkModal();
     });
 
     // --- 설정 팝업(사이드 네비 + 패널) ---
@@ -890,12 +990,14 @@
                 ${PREFIXES.map(function (p) {
                     return '<label><input type="checkbox" class="te-prefix" value="' + p + '"> ' + p + '</label>';
                 }).join('')}
+                <label class="te-held-filter-label"><input type="checkbox" id="te-held-filter"> 보류</label>
                 <input type="text" id="te-filter" class="te-filter-input" placeholder="테이블 필터..." autocomplete="off">
             </div>
             <div class="te-result-header">
                 <div class="result-title">
                     <span>추출 결과</span>
                     <span class="count-badge" id="te-count">${allMainTables.length}개</span>
+                    <span class="count-badge te-held-badge" id="te-held-count" style="display:none;"></span>
                 </div>
                 <div class="te-result-actions">
                     <button class="btn-secondary" id="te-copy-all">전체 복사</button>
@@ -910,25 +1012,48 @@
 
         var listEl = resultEl.querySelector('#te-table-list');
         var countEl = resultEl.querySelector('#te-count');
+        var heldCountEl = resultEl.querySelector('#te-held-count');
         var filterEl = resultEl.querySelector('#te-filter');
+        var heldFilterEl = resultEl.querySelector('#te-held-filter');
 
-        // 현재 UI 상태(텍스트 필터 + 접두사 체크박스)를 읽어 매칭 계산 (FEP 제외한 메인 목록 대상)
-        //   텍스트: 부분일치(AND) / 접두사: 체크된 것 중 하나로 시작(OR), 아무것도 안 체크하면 제약 없음
+        // 현재 UI 상태(텍스트 필터 + 접두사 체크박스 + 보류만 체크박스)를 읽어 매칭 계산
+        // (FEP 제외한 메인 목록 대상). 텍스트: 부분일치(AND) / 접두사: 체크된 것 중 하나로
+        // 시작(OR), 아무것도 안 체크하면 제약 없음 / 보류만: 체크 시 보류된 테이블만 남김.
         function computeMatches() {
             var q = filterEl.value.trim().toUpperCase();
             var checked = Array.prototype.slice.call(resultEl.querySelectorAll('.te-prefix:checked'))
                                .map(function (c) { return c.value; });
+            var heldOnly = heldFilterEl.checked;
             return allMainTables.filter(function (t) {
                 if (q && t.indexOf(q) === -1) return false;
                 if (checked.length && !checked.some(function (p) { return t.indexOf(p) === 0; })) return false;
+                if (heldOnly && !heldTables.has(t)) return false;
                 return true;
             });
         }
 
         function renderList() {
             var matches = computeMatches();
-            visibleTables = matches;   // 필터된 결과 = 이관 대상. 우측 PK 입력란이 이 목록을 따른다.
+            // 보류된 테이블이 뒤로 가도록 안정 정렬 — 지금 이관할 대상이 위쪽에 몰리게 한다.
+            matches = matches.slice().sort(function (a, b) {
+                return (heldTables.has(a) ? 1 : 0) - (heldTables.has(b) ? 1 : 0);
+            });
+            // 이관 대상: 평소엔 필터된 결과 중 보류되지 않은 것만. "보류만" 필터가 켜져 있으면
+            // 지금 보이는 게 곧 보류된 테이블들이므로, 그걸 그대로 대상으로 삼는다(명시적으로
+            // 보류 목록을 골라서 생성 버튼을 누르면 그 보류 테이블들에 대해 SQL이 생성됨).
+            // PK 입력란/이관 SQL 생성/전체 복사가 모두 이 배열을 그대로 읽는다.
+            visibleTables = heldFilterEl.checked
+                ? matches
+                : matches.filter(function (t) { return !heldTables.has(t); });
             countEl.textContent = matches.length + '개';
+
+            var heldInView = matches.length - visibleTables.length;
+            if (heldInView > 0) {
+                heldCountEl.textContent = '보류 ' + heldInView + '개';
+                heldCountEl.style.display = '';
+            } else {
+                heldCountEl.style.display = 'none';
+            }
 
             if (!matches.length) {
                 listEl.innerHTML = '<div class="te-empty" style="grid-column:1/-1;">일치하는 테이블이 없습니다.</div>';
@@ -936,14 +1061,22 @@
                 return;
             }
             listEl.innerHTML = matches.map(function (t) {
+                var held = heldTables.has(t);
                 return `
-                    <div class="te-table-item">
+                    <div class="te-table-item${held ? ' te-table-item-held' : ''}">
                         <span class="te-table-name" title="${escapeHtml(t)}">${escapeHtml(t)}</span>
                         <span class="te-item-actions">
                             <button class="copy-btn" title="복사" data-table="${escapeHtml(t)}">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke-width="2"></rect>
                                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-width="2"></path>
+                                </svg>
+                            </button>
+                            <button class="copy-btn te-hold-btn${held ? ' active' : ''}" title="${held ? '이관 대상으로 복귀' : '이관 보류(보관함에 담아두기)'}" data-table="${escapeHtml(t)}">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <rect x="4" y="8" width="16" height="12" rx="1.5" stroke-width="2"></rect>
+                                    <path d="M4 8l3-4h10l3 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                    <path d="M10 12.5h4" stroke-width="2" stroke-linecap="round"></path>
                                 </svg>
                             </button>
                             <button class="copy-btn te-del-btn" title="삭제" data-table="${escapeHtml(t)}">
@@ -962,11 +1095,25 @@
                     App.copyToClipboard(name, '"' + name + '" 테이블명이 복사되었습니다.');
                 });
             });
+            listEl.querySelectorAll('.te-hold-btn').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    var name = e.currentTarget.getAttribute('data-table');
+                    if (heldTables.has(name)) {
+                        heldTables.delete(name);
+                        App.showToast('"' + name + '" 보류 해제됨');
+                    } else {
+                        heldTables.add(name);
+                        App.showToast('"' + name + '" 보류함(이관 대상에서 제외, 목록에는 유지)');
+                    }
+                    renderList();
+                });
+            });
             listEl.querySelectorAll('.te-del-btn').forEach(function (btn) {
                 btn.addEventListener('click', function (e) {
                     var name = e.currentTarget.getAttribute('data-table');
                     var idx = allMainTables.indexOf(name);
                     if (idx !== -1) allMainTables.splice(idx, 1);   // 메인 목록에서 제거 → 목록/개수/PK 입력란 모두 renderList가 갱신
+                    heldTables.delete(name);
                     renderList();
                     App.showToast('"' + name + '" 삭제됨');
                 });
@@ -977,6 +1124,7 @@
         resultEl.querySelectorAll('.te-prefix').forEach(function (cb) {
             cb.addEventListener('change', renderList);
         });
+        heldFilterEl.addEventListener('change', renderList);
 
         resultEl.querySelector('#te-copy-all').addEventListener('click', function () {
             if (!visibleTables.length) {
