@@ -1,6 +1,17 @@
+/* --- 섹션 간 간격 조정 (이 툴에만 스코프, table_extractor와 동일한 패턴) ---
+   공용 .container는 flex column + gap 24. 여기에 .ia-workspace margin-top(20)이 더해져
+   검색바↔워크스페이스 간격이 44였다. 이 툴에 한해 gap을 18로 낮추고, 헤더↔검색바 간격은
+   기존 24를 유지하도록 .ia-search-bar에 margin-top 6을 보태 상쇄한다:
+     헤더 ↔ 검색바        = gap18 + 검색바 margin-top 6   = 24 (기존과 동일)
+     검색바 ↔ 워크스페이스 = gap18 + 워크스페이스 margin-top 0 = 18 (기존 44에서 대폭 축소) */
+#page-impact-analysis.container {
+    gap: 18px;
+}
+
 .ia-search-bar {
     display: flex;
     gap: 10px;
+    margin-top: 6px;
 }
 
 .ia-search-select {
@@ -186,7 +197,7 @@
     grid-template-rows: 1fr;
     gap: 24px;
     align-items: stretch;
-    margin-top: 20px;
+    margin-top: 0;
     min-height: 420px;
 }
 
