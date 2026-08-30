@@ -6,18 +6,14 @@
         <div class="header">
             <div class="badge">영향도 분석</div>
             <h1>Impact Analysis</h1>
-            <p>테이블명을 입력하면 그 테이블을 참조하는 DBIO를 찾습니다.<br>DBIO를 펼치면 연결된 비즈·서비스·배치 모듈을 조회하고, 비즈모듈은 다시 펼쳐 그 비즈를 부르는 상위 모듈을 계속 따라갈 수 있습니다(서비스·배치는 항상 최상위).</p>
+            <p>테이블명 또는 비즈모듈명을 입력하면, 테이블은 그 테이블을 참조하는 DBIO를, 비즈모듈은 곧바로 그 모듈을 찾습니다.<br>DBIO·비즈모듈을 펼치면 연결된 비즈·서비스·배치 모듈을 조회하고, 비즈모듈은 다시 펼쳐 그 비즈를 부르는 상위 모듈을 계속 따라갈 수 있습니다(서비스·배치는 항상 최상위).</p>
         </div>
 
         <form class="ia-search-bar" id="ia-search-form">
             <select id="ia-target-type" class="ia-search-select">
-                <option value="table">테이블</option>
-                <option value="biz">비즈모듈</option>
+                <option value="table">Table</option>
+                <option value="biz">Biz</option>
             </select>
-            <div class="ia-combo" id="ia-prog-combo" style="display:none;">
-                <input type="text" id="ia-prog" class="ia-combo-input" placeholder="업무그룹" autocomplete="off">
-                <ul id="ia-prog-list" class="ia-combo-list"></ul>
-            </div>
             <input type="text" id="ia-search-input" placeholder="테이블명을 입력하세요 (예: PFO_FUND_BS)" autocomplete="off">
             <div class="ia-group-filter" id="ia-group-filter">
                 <button type="button" class="ia-group-filter-btn" id="ia-group-filter-btn">업무그룹 전체</button>
@@ -55,9 +51,6 @@
     var form = container.querySelector('#ia-search-form');
     var typeSel = container.querySelector('#ia-target-type');
     var searchInput = container.querySelector('#ia-search-input');
-    var progCombo = container.querySelector('#ia-prog-combo');
-    var progInput = container.querySelector('#ia-prog');
-    var progList = container.querySelector('#ia-prog-list');
     var resultsEl = container.querySelector('#ia-results');
     var summaryEl = container.querySelector('#ia-summary');
     var summaryCopyBtn = container.querySelector('#ia-summary-copy-btn');
@@ -161,50 +154,8 @@
         }
     });
 
-    // 비즈모듈 조회는 업무그룹이 필요하지만 테이블 조회는 필요 없다.
-    function updateProgVisibility() {
-        progCombo.style.display = typeSel.value === 'biz' ? '' : 'none';
-    }
-
-    function renderProgList(query) {
-        var q = (query || '').trim().toUpperCase();
-        var matches = PROG_OPTIONS.filter(function (p) {
-            return p.indexOf(q) !== -1;
-        });
-        if (!matches.length) {
-            progList.innerHTML = '';
-            progList.classList.remove('open');
-            return;
-        }
-        progList.innerHTML = matches.map(function (p) {
-            return '<li data-value="' + p + '">' + p + '</li>';
-        }).join('');
-        progList.classList.add('open');
-    }
-
     typeSel.addEventListener('change', function () {
         searchInput.placeholder = PLACEHOLDER[typeSel.value];
-        updateProgVisibility();
-    });
-
-    progInput.addEventListener('input', function () {
-        renderProgList(progInput.value);
-    });
-
-    progInput.addEventListener('focus', function () {
-        renderProgList(progInput.value);
-    });
-
-    // mousedown은 input의 blur보다 먼저 발생하므로 클릭 선택에 사용
-    progList.addEventListener('mousedown', function (e) {
-        var li = e.target.closest('li');
-        if (!li) return;
-        progInput.value = li.getAttribute('data-value');
-        progList.classList.remove('open');
-    });
-
-    progInput.addEventListener('blur', function () {
-        progList.classList.remove('open');
     });
 
     function renderMessage(text) {
@@ -420,18 +371,29 @@
         renderSummary();
     }
 
+    // 비즈모듈 검색: 입력한 ID 자체가 이미 루트라 DBIO처럼 1차 조회가 따로 없다 —
+    // 바로 펼칠 수 있는 단일 항목으로 보여주고, 펼치면 loadCallers("biz", id, ...)가 호출된다.
+    function renderBizRoot(id) {
+        resultsEl.innerHTML = '';
+        var ul = document.createElement('ul');
+        ul.className = 'ia-dbio-list';
+        ul.appendChild(makeExpandableItem('biz', id, []));
+        resultsEl.appendChild(ul);
+    }
+
     form.addEventListener('submit', function (e) {
         e.preventDefault();
 
         var query = searchInput.value.trim();
         if (!query) return;
 
-        if (typeSel.value !== 'table') {
-            renderMessage('비즈모듈 검색은 아직 지원하지 않습니다.');
+        resetAggregate();
+
+        if (typeSel.value === 'biz') {
+            renderBizRoot(query);
             return;
         }
 
-        resetAggregate();
         renderMessage('검색 중...');
 
         fetch('impact-analysis/dbios/' + encodeURIComponent(query))
