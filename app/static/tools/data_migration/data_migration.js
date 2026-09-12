@@ -1167,12 +1167,13 @@
         // (FEP 제외한 메인 목록 대상). 텍스트: 부분일치(AND) / 접두사: 체크된 것 중 하나로
         // 시작(OR), 아무것도 안 체크하면 제약 없음 / 보류만: 체크 시 보류된 테이블만 남김.
         function computeMatches() {
-            var q = filterEl.value.trim().toUpperCase();
+            var raw = filterEl.value.trim().toUpperCase();
+            var parts = raw ? raw.split('|').map(function (p) { return p.trim(); }).filter(Boolean) : [];
             var checked = Array.prototype.slice.call(resultEl.querySelectorAll('.dm-prefix:checked'))
                                .map(function (c) { return c.value; });
             var heldOnly = heldFilterEl.checked;
             return allMainTables.filter(function (t) {
-                if (q && t.indexOf(q) === -1) return false;
+                if (parts.length && !parts.some(function (p) { return t.indexOf(p) !== -1; })) return false;
                 if (checked.length && !checked.some(function (p) { return t.indexOf(p) === 0; })) return false;
                 if (heldOnly && !heldTables.has(t)) return false;
                 return true;
