@@ -30,7 +30,10 @@
 
         <div class="ia-workspace">
             <div class="card ia-panel" id="ia-panel-left">
-                <div class="ia-panel-title">검색 결과</div>
+                <div class="ia-panel-title">
+                    <span>검색 결과</span>
+                    <input type="text" id="ia-result-filter" class="ia-result-filter" placeholder="ID 필터..." autocomplete="off">
+                </div>
                 <div class="ia-results" id="ia-results"></div>
             </div>
             <div class="ia-splitter" id="ia-splitter"></div>
@@ -55,6 +58,7 @@
     var resultsEl = container.querySelector('#ia-results');
     var summaryEl = container.querySelector('#ia-summary');
     var summaryCopyBtn = container.querySelector('#ia-summary-copy-btn');
+    var resultFilterInput = container.querySelector('#ia-result-filter');
     var groupFilter = container.querySelector('#ia-group-filter');
     var groupFilterBtn = container.querySelector('#ia-group-filter-btn');
     var groupFilterPanel = container.querySelector('#ia-group-filter-panel');
@@ -224,8 +228,21 @@
         renderSummary();
     }
 
+    function getResultFilterParts() {
+        var raw = resultFilterInput ? resultFilterInput.value.trim().toUpperCase() : '';
+        return raw ? raw.split('|').map(function (p) { return p.trim(); }).filter(Boolean) : [];
+    }
+
+    function matchesFilter(id) {
+        var parts = getResultFilterParts();
+        if (!parts.length) return true;
+        var upper = id.toUpperCase();
+        return parts.some(function (p) { return upper.indexOf(p) !== -1; });
+    }
+
     function renderSummaryGroup(label, set) {
         var ids = Array.from(set).sort();
+        ids = ids.filter(matchesFilter);
         if (!ids.length) {
             return '<div class="ia-summary-group ia-summary-group-empty">' + escapeHtml(label) + ' 없음</div>';
         }
@@ -247,22 +264,37 @@
             renderSummaryGroup('Batch', agg.batches);
     }
 
+    function applyResultFilter() {
+        resultsEl.querySelectorAll('.ia-dbio-list > li').forEach(function (li) {
+            var idEl = li.querySelector('.ia-dbio-id');
+            var id = idEl ? idEl.textContent : '';
+            li.style.display = matchesFilter(id) ? '' : 'none';
+        });
+        renderSummary();
+    }
+
+    resultFilterInput.addEventListener('input', applyResultFilter);
+
     renderSummary();
 
-    // 집계 전체를 클립보드에 복사 — 그룹별로 한 줄, id는 쉼표로 구분(빈 그룹은 "없음").
+    // 집계 전체를 클립보드에 복사 — 필터 적용 후 보이는 항목만, 그룹별 한 줄.
     summaryCopyBtn.addEventListener('click', function () {
-        if (!agg.dbios.size && !agg.services.size && !agg.bizs.size && !agg.batches.size) {
+        function filteredIds(set) {
+            return Array.from(set).sort().filter(matchesFilter);
+        }
+        var groups = [
+            ['DBIO', filteredIds(agg.dbios)],
+            ['Service', filteredIds(agg.services)],
+            ['Biz', filteredIds(agg.bizs)],
+            ['Batch', filteredIds(agg.batches)],
+        ];
+        var hasAny = groups.some(function (g) { return g[1].length > 0; });
+        if (!hasAny) {
             App.showToast('복사할 집계 결과가 없습니다.');
             return;
         }
-        var lines = [
-            ['DBIO', agg.dbios],
-            ['Service', agg.services],
-            ['Biz', agg.bizs],
-            ['Batch', agg.batches],
-        ].map(function (entry) {
-            var ids = Array.from(entry[1]).sort();
-            return '[' + entry[0] + '] ' + (ids.length ? ids.join(', ') : '없음');
+        var lines = groups.map(function (g) {
+            return '[' + g[0] + '] ' + (g[1].length ? g[1].join(', ') : '없음');
         });
         App.copyToClipboard(lines.join('\n'), '집계 결과가 클립보드에 복사되었습니다.');
     });
@@ -472,10 +504,20 @@
         if (!query) return;
 
         resetAggregate();
+        resultFilterInput.value = '';
 
-        // table만 1차 조회(테이블 → DBIO)가 필요하고, dbio/biz는 입력 자체가 루트다.
+        // table만 1차 조회(테이블 → DBIO)가 필요하고, dbio/biz는 존재 확인 후 루트로 렌더.
         if (typeSel.value !== 'table') {
-            renderRoot(typeSel.value, query);
+            renderMessage('검색 중...');
+            fetch('source/' + encodeURIComponent(typeSel.value) + '/' + encodeURIComponent(query))
+                .then(function (res) {
+                    if (res.status === 404) throw new Error('존재하지 않는 모듈입니다: ' + query);
+                    if (!res.ok) return res.json().then(function (d) { throw new Error(d.detail || '조회에 실패했습니다.'); });
+                    renderRoot(typeSel.value, query);
+                })
+                .catch(function (err) {
+                    renderMessage(err.message || '조회에 실패했습니다.');
+                });
             return;
         }
 

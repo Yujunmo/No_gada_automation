@@ -264,6 +264,35 @@
     padding-bottom: 12px;
 }
 
+#ia-panel-left .ia-panel-title {
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+.ia-result-filter {
+    font-family: inherit;
+    font-size: 13px;
+    height: 30px;
+    width: 200px;
+    padding: 0 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: #ffffff;
+    color: var(--text-main);
+    box-sizing: border-box;
+    transition: var(--transition-default);
+}
+
+.ia-result-filter:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(204, 107, 73, 0.12);
+}
+
+.ia-result-filter::placeholder {
+    color: #b0aba4;
+}
+
 .ia-results {
     flex: 1;
     min-height: 0;
