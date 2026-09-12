@@ -120,12 +120,12 @@ pytest -k dual
    - `service`/`biz`: `resource_group=None`으로 재귀 호출(업무그룹 불명 → `read_module_source`의 group_map/find 폴백으로 알아서 찾음).
 5. 하위 결과의 `tables`/`sql`/`dbios`/`batches`/`services`/`bizs`를 전부 부모로 merge(union) — 트리를 타고 올라가며 누적.
 
-응답(`ExtractResponse`): `{tables, sql, dbios, batches, services, bizs}` — `tables`/`batches`/`services`/`bizs`는 정렬된 리스트, `dbios`는 발견 순서 보존, `sql`은 수집한 SQL을 `;`로 이어붙인 문자열.
+응답(`ExtractResponse`): `{tables, dbios, batches, services, bizs}` — `tables`/`batches`/`services`/`bizs`는 정렬된 리스트, `dbios`는 발견 순서 보존. 추출 결과는 **테이블과 추출근거 트레이스만** 나른다(SQL 본문은 싣지 않는다 — 소스가 필요하면 `GET /source`가 클릭 시점에 조회한다).
 
 에러 매핑(라우터 `extract`): 빈 ID→400, `module_type != dbio`인데 `resource_group` 없음→400, `UnknownSqlType`/`ExtractionError`→400, `SourceNotFound`→404, `SourceError`→503.
 
 **`POST /data-migration/{module_type}/extract-batch`**(여러 ID 동시 추출): `{resource_group?, file_ids:[...]}` →
-`{tables, sql, dbios, batches, services, bizs, succeeded, failed:[{file_id,error}]}`. 프론트가 이제
+`{tables, dbios, batches, services, bizs, succeeded, failed:[{file_id,error}]}`. 프론트가 이제
 항상 이 엔드포인트만 호출한다(ID 1개여도 동일 경로) — 위 단일 GET 라우트는 계약을 그대로 유지하되
 UI에서 더 이상 직접 호출하지 않는다. 경로에 "batch"가 아니라 "extract-batch"를 쓴 이유는
 `module_type == "batch"`(ProFrame 배치 모듈)와 어휘가 겹치는 `POST /data-migration/batch/batch` 같은

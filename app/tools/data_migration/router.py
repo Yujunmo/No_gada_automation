@@ -28,7 +28,6 @@ router = APIRouter(prefix="/data-migration")
 
 class ExtractResponse(BaseModel):
     tables: list[str]    # 정렬된 대문자 물리 테이블명 합집합
-    sql: str             # 수집한 SQL(우측 패널 표시용, ;로 연결)
     dbios: list[str]     # 해석 과정에서 도달한 DBIO ID 목록(참고용)
     batches: list[str]   # 참조만 되고 소스는 들여다보지 않은 배치 ID 목록(참고용)
     services: list[str]  # 재귀 중 실제로 읽어들인 service 모듈 ID(진입 모듈 포함, 추출근거 표시용)
@@ -50,7 +49,6 @@ class BatchFailedItem(BaseModel):
 
 class BatchExtractResponse(BaseModel):
     tables: list[str]
-    sql: str
     dbios: list[str]
     batches: list[str]
     services: list[str]
@@ -160,7 +158,7 @@ def extract(
         len(result.tables), len(result.dbios), len(result.batches), len(result.services), len(result.bizs),
     )
     return ExtractResponse(
-        tables=result.tables, sql=result.sql, dbios=result.dbios, batches=result.batches,
+        tables=result.tables, dbios=result.dbios, batches=result.batches,
         services=result.services, bizs=result.bizs,
     )
 
@@ -206,7 +204,7 @@ def extract_batch(
     logger.info("extract_batch 완료: 성공 %d개, 실패 %d개, 테이블 %d개",
                 len(result.succeeded), len(result.failed), len(result.tables))
     return BatchExtractResponse(
-        tables=result.tables, sql=result.sql, dbios=result.dbios, batches=result.batches,
+        tables=result.tables, dbios=result.dbios, batches=result.batches,
         services=result.services, bizs=result.bizs, succeeded=result.succeeded,
         failed=[
             BatchFailedItem(file_id=f.file_id, error=f"{_status_for(f.error)}: {f.error}")

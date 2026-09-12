@@ -21,7 +21,6 @@ logger = logging.getLogger("no_gada.data_migration")
 @dataclass
 class ExtractResult:
     tables: list[str]
-    sql: str
     dbios: list[str]
     batches: list[str] = field(default_factory=list)  # 참조만 되고 소스는 들여다보지 않은 배치 ID
     services: list[str] = field(default_factory=list)  # 재귀 중 실제로 읽어들인 service 모듈 ID(진입 모듈 포함)
@@ -37,7 +36,6 @@ class FailedItem:
 @dataclass
 class BatchExtractResult:
     tables: list[str]
-    sql: str
     dbios: list[str]
     batches: list[str] = field(default_factory=list)
     services: list[str] = field(default_factory=list)
@@ -93,7 +91,6 @@ def extract_batch(
         cleaned_ids.append(fid)
 
     tables: set[str] = set()
-    sqls: list[str] = []
     dbios: list[str] = []
     dbios_seen: set[str] = set()
     batches: set[str] = set()
@@ -112,8 +109,6 @@ def extract_batch(
 
         succeeded.append(fid)
         tables.update(result.tables)
-        if result.sql:
-            sqls.append(result.sql)
         for d in result.dbios:
             if d not in dbios_seen:
                 dbios_seen.add(d)
@@ -123,17 +118,21 @@ def extract_batch(
         bizs.update(result.bizs)
 
     return BatchExtractResult(
-        tables=sorted(tables), sql=";\n".join(sqls), dbios=dbios,
+        tables=sorted(tables), dbios=dbios,
         batches=sorted(batches), services=sorted(services), bizs=sorted(bizs),
         succeeded=succeeded, failed=failed,
     )
 
 
 def extract_from_dbio(file_id: str, reader: SourceReader) -> ExtractResult:
-    """DBIO 리프: XML 조회 → <sqlString> 추출 → 테이블 추출(공용 dbio_referenced_tables 위임)."""
-    tables, sql = dbio_referenced_tables(file_id, reader)
+    """DBIO 리프: XML 조회 → <sqlString> 추출 → 테이블 추출(공용 dbio_referenced_tables 위임).
+
+    dbio_referenced_tables는 (테이블, SQL)을 돌려주지만 SQL은 버린다 — 소스 보기는 별도
+    엔드포인트(GET /source)가 클릭 시점에 조회하므로, 추출 결과에 실어 나를 이유가 없다.
+    """
+    tables, _ = dbio_referenced_tables(file_id, reader)
     logger.debug("extract_from_dbio: 테이블 %d개 집계 file_id=%s", len(tables), file_id)
-    return ExtractResult(tables=tables, sql=sql, dbios=[file_id])
+    return ExtractResult(tables=tables, dbios=[file_id])
 
 
 def extract_from_module(
@@ -145,7 +144,7 @@ def extract_from_module(
     excluded: Optional[set[str]] = None,
     group_map: Optional[dict[tuple[str, str], str]] = None,
 ) -> ExtractResult:
-    """service/batch/biz 모듈 → 참조를 재귀적으로 따라가 도달한 DBIO의 SQL/테이블을 합산.
+    """service/batch/biz 모듈 → 참조를 재귀적으로 따라가 도달한 DBIO의 테이블을 합산.
 
     최초 호출(visited=None — 라우터가 지정한 최상위 진입 모듈)의 소스 조회 실패는 그대로
     전파해 라우터가 404/503으로 매핑한다. 재귀 호출(visited가 전달됨) 중 만나는 개별
@@ -179,7 +178,7 @@ def extract_from_module(
             "extract_from_module: 소스 조회 실패(skip) module_type=%s file_id=%s: %s",
             module_type, file_id, e,
         )
-        return ExtractResult(tables=[], sql="", dbios=[])
+        return ExtractResult(tables=[], dbios=[])
 
     logger.debug(
         "extract_from_module: 소스 조회 완료 module_type=%s file_id=%s (%d chars)",
@@ -199,7 +198,6 @@ def extract_from_module(
     logger.debug("extract_from_module: 참조 %d개 발견 file_id=%s", len(refs), file_id)
 
     tables: set[str] = set()
-    sqls: list[str] = []
     dbios: list[str] = []
     batches: set[str] = set()
 
@@ -233,15 +231,13 @@ def extract_from_module(
             )
 
         tables.update(result.tables)
-        if result.sql:
-            sqls.append(result.sql)
         dbios.extend(result.dbios)
         batches.update(result.batches)
         services.update(result.services)
         bizs.update(result.bizs)
 
     return ExtractResult(
-        tables=sorted(tables), sql=";\n".join(sqls), dbios=dbios, batches=sorted(batches),
+        tables=sorted(tables), dbios=dbios, batches=sorted(batches),
         services=sorted(services), bizs=sorted(bizs),
     )
 
