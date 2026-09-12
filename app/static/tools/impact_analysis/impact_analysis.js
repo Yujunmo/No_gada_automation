@@ -95,16 +95,36 @@
                 selectedGroups.add(group);
             });
         }
-        renderGroupFilterPanel();
+        renderFilteredItems();
         updateGroupFilterLabel();
     });
 
-    function renderGroupFilterPanel() {
-        groupFilterPanel.innerHTML = '';
-        updateToggleAllLabel();
-        groupFilterPanel.appendChild(toggleAllBtn);
+    var groupFilterSearch = document.createElement('input');
+    groupFilterSearch.type = 'text';
+    groupFilterSearch.placeholder = '검색';
+    groupFilterSearch.className = 'ia-group-filter-search';
+    groupFilterSearch.addEventListener('input', function () {
+        renderFilteredItems();
+    });
 
-        PROG_OPTIONS.forEach(function (group) {
+    var groupFilterHeader = document.createElement('div');
+    groupFilterHeader.className = 'ia-group-filter-header';
+    groupFilterHeader.appendChild(toggleAllBtn);
+    groupFilterHeader.appendChild(groupFilterSearch);
+
+    var groupFilterItems = document.createElement('div');
+    groupFilterItems.className = 'ia-group-filter-items';
+
+    function renderFilteredItems() {
+        updateToggleAllLabel();
+        groupFilterItems.innerHTML = '';
+
+        var filterText = groupFilterSearch.value.toLowerCase().trim();
+        var filteredGroups = PROG_OPTIONS.filter(function (group) {
+            return group.toLowerCase().includes(filterText);
+        });
+
+        filteredGroups.forEach(function (group) {
             var label = document.createElement('label');
             label.className = 'ia-group-filter-item';
 
@@ -128,8 +148,15 @@
 
             label.appendChild(text);
             label.appendChild(checkbox);
-            groupFilterPanel.appendChild(label);
+            groupFilterItems.appendChild(label);
         });
+    }
+
+    function renderGroupFilterPanel() {
+        groupFilterPanel.innerHTML = '';
+        groupFilterPanel.appendChild(groupFilterHeader);
+        groupFilterPanel.appendChild(groupFilterItems);
+        renderFilteredItems();
     }
 
     function getSelectedGroups() {
@@ -149,11 +176,16 @@
     groupFilterBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         groupFilterPanel.classList.toggle('open');
+        if (groupFilterPanel.classList.contains('open')) {
+            groupFilterSearch.focus();
+        }
     });
 
     document.addEventListener('click', function (e) {
         if (!groupFilter.contains(e.target)) {
             groupFilterPanel.classList.remove('open');
+            groupFilterSearch.value = '';
+            renderFilteredItems();
         }
     });
 
@@ -248,6 +280,7 @@
         var startLeftWidth = leftPanel.offsetWidth;
         splitter.classList.add('dragging');
         leftPanel.style.flex = 'none';
+        leftPanel.style.width = startLeftWidth + 'px';
         rightPanel.style.flex = '1';
 
         function onMouseMove(e) {

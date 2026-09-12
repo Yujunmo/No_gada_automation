@@ -35,7 +35,7 @@
     box-shadow: 0 0 0 3px rgba(204, 107, 73, 0.12);
 }
 
-.ia-search-bar input {
+.ia-search-bar > input {
     flex: 1;
     height: 44px;
     padding: 0 14px;
@@ -49,11 +49,11 @@
     transition: var(--transition-default);
 }
 
-.ia-search-bar input::placeholder {
+.ia-search-bar > input::placeholder {
     color: #b0aba4;
 }
 
-.ia-search-bar input:focus {
+.ia-search-bar > input:focus {
     outline: none;
     border-color: var(--border-focus);
     box-shadow: 0 0 0 3px rgba(204, 107, 73, 0.12);
@@ -95,6 +95,7 @@
 .ia-group-filter-btn {
     height: 44px;
     padding: 0 16px;
+    min-width: 169px;
     font-family: inherit;
     font-size: 14px;
     text-align: left;
@@ -122,7 +123,7 @@
     display: none;
     flex-direction: column;
     gap: 1px;
-    width: 130px;
+    width: 169px;
     max-height: 180px;
     overflow-y: auto;
     background: #ffffff;
@@ -135,10 +136,17 @@
     display: flex;
 }
 
-.ia-group-filter-toggle-all {
-    width: 100%;
-    box-sizing: border-box;
+.ia-group-filter-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-bottom: 4px;
     margin-bottom: 3px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ia-group-filter-toggle-all {
+    flex-shrink: 0;
     padding: 5px 8px;
     font-family: inherit;
     font-size: 12px;
@@ -147,13 +155,43 @@
     color: var(--accent-color);
     background: none;
     border: none;
-    border-bottom: 1px solid var(--border-color);
     border-radius: 0;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .ia-group-filter-toggle-all:hover {
     background: rgba(204, 107, 73, 0.08);
+}
+
+.ia-group-filter-search {
+    flex: 1;
+    height: 25px;
+    padding: 0 8px;
+    font-family: inherit;
+    font-size: 12px;
+    background: var(--bg-color);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+.ia-group-filter-search::placeholder {
+    color: #b0aba4;
+}
+
+.ia-group-filter-search:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 2px rgba(204, 107, 73, 0.12);
+}
+
+.ia-group-filter-items {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
 }
 
 .ia-group-filter-item {
@@ -175,7 +213,7 @@
 
 .ia-group-filter-item-text {
     flex: none;
-    width: 56px;
+    width: 73px;
     text-align: left;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -183,8 +221,8 @@
 }
 
 .ia-group-filter-item input {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     accent-color: var(--accent-color);
     cursor: pointer;
 }
