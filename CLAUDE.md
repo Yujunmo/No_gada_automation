@@ -170,9 +170,22 @@ UI에서 더 이상 직접 호출하지 않는다. 경로에 "batch"가 아니�
 프론트(`data_migration.js`): 컨트롤 바의 `⋮`(`#dm-settings-btn`) 클릭 → 좌측 사이드 네비(`#dm-settings-nav`) + 우측 패널(`#dm-settings-panel`) 구조의 설정 모달(`#dm-settings-modal`, 기존 `#dm-modal`과 별개)이 열린다. 네비 항목("테이블 추출 예외처리"/"모듈 예외처리")은 각각 `makeListSettingsPanel(opts)` 팩토리로 만든 동일한 조회→편집→저장 UI를 쓴다 — `opts`로 endpoint/request·response 필드명(`tables` vs `ids`)/정규화 함수(대문자화 여부)/라벨·설명 문구만 다르게 주입. 새 탭을 추가하려면 네비 버튼 + `SETTINGS_PANELS`에 팩토리 호출 한 줄만 더하면 된다.
 - **조회→편집→저장 흐름**: 패널을 열 때마다 `GET`으로 서버의 현재 확정 목록(`committed`)을 받아 작업 사본(`draft`)을 초기화한다. 추가/삭제는 `draft`에만 반영되고(입력 후 Enter 또는 추가 버튼), **저장** 버튼을 눌러야 `POST`로 전체 교체 저장되며 그 응답이 새 `committed`가 된다. 미저장 변경이 있으면 "저장되지 않은 변경사항이 있습니다" 힌트가 뜨고 저장 버튼이 활성화되며, 팝업을 저장 없이 닫고 다시 열면 항상 최신 서버 상태로 재초기화되어 미저장 편집은 버려진다.
 
+### 공용 부가 API `app/tools/support/`
+사이드바 도구가 아니면서 여러 툴이 공유하는 엔드포인트를 모아둔다. `app/tools/<name>/`이 "사이드바 도구 하나"(백엔드+프론트+`data-page` 3중 결속)라는 규약이라, 프론트 짝도 사이드바 항목도 없는 라우터를 그 자리에 두면 도구 목록을 오독하게 된다. **`app/common/`과 혼동하지 말 것** — `app/common/`은 FastAPI를 한 번도 import하지 않는 "층"(함수로 가져다 씀)이고, 여기는 엄연한 HTTP 경계다. 그래서 라우터는 `app/common/`에 둘 수 없다. 각 파일은 패키지가 아니라 모듈 하나(`meta.py`, `source.py`)이며, `service.py`가 필요할 만큼 커지면 그때 패키지로 승격한다.
+
+- **`support/meta.py`**: `GET /meta/resource-groups` — `ResourceGroup` Literal을 프론트에 노출(프론트 하드코딩 방지).
+- **`support/source.py`**: `GET /source/{module_type}/{file_id}?resource_group=` → `{module_type, file_id, content, truncated}`. Data Migration의 "추출경로"/"발견된 batch" 목록에서 항목의 **읽기 버튼**이 호출한다.
+  - `module_type`은 `Module_Type` Literal이라 잘못된 값은 FastAPI가 422로 자동 거부. `resource_group`은 **옵셔널 쿼리 파라미터**(경로 세그먼트가 아님) — 추출경로에 뜨는 ID는 대부분 재귀 중 발견된 것이라 프론트가 업무그룹을 모른다. **추측해서 넘기면 안 된다**: 값이 주어지면 `read_module_source`가 find 폴백 없이 그 경로만 읽고 바로 404다(`module_source.py`의 `resource_group is not None` 분기).
+  - dbio는 `read_dbio_xml` + `dbio_sql.extract_sql`을 조합해 **추출된 SQL만** 돌려준다(XML 원문 아님). **공용 `dbio_referenced_tables`를 쓰지 않는다** — 그 함수는 내부에서 `extract_tables`(sqlglot)를 돌려 `ExtractionError`를 던질 수 있는데, 파싱이 안 되는 SQL일수록 사람이 눈으로 봐야 하므로 조회가 막히면 안 된다. `<sqlString>`이 없으면 `content == ""`(에러 아님).
+  - service/batch/biz는 `read_module_source(..., group_map=load_group_map())`. `group_map`을 꼭 넘긴다(안 넘기면 매 요청이 업무그룹 전수 탐색). 단 **batch는 `group_map`에 절대 없어**(`build_group_map`이 `service`/`biz`만 순회) 항상 find 폴백을 탄다 — "batch만 유독 느림"의 원인.
+  - 크기 가드 `MAX_SOURCE_CHARS = 1_000_000`: 초과 시 413으로 막지 않고 앞부분만 잘라 `truncated=True`로 알린다(잘린 앞부분이라도 보는 게 "소스 보기" 목적에 맞음).
+  - 에러 매핑: `UnknownSqlType`→400, `SourceNotFound`→404, `SourceError`→503.
+  - **성능 주의**: `default_reader`가 yield 의존성이라 **요청마다 SFTP 세션을 새로 맺고 응답 후 닫는다**. 재귀 추출은 접속 하나를 수백 번의 read가 나눠 쓰지만 이 엔드포인트는 read 한 번이 접속 하나를 통째로 부담한다 — **체감 지연의 대부분은 경로 탐색이 아니라 SSH 핸드셰이크**다. 느리다고 경로 탐색을 최적화하지 말 것(반복 클릭 비용은 프론트 캐시가 흡수하고, find 폴백이 실제로 느리면 `scripts/build_module_group_map.py`로 `config/module_group_map.txt`를 채우는 게 정답).
+
 ### 로깅
 로거 이름은 `no_gada.<tool>` 계층(예: 공용 SQL 추출은 `no_gada.sql`). `main.py`에서 콘솔 + `RotatingFileHandler`(`logs/no_gada.log`, 5MB×5)를 붙이고, **루트=INFO, `no_gada`=DEBUG**로 설정해 서드파티 DEBUG 노이즈는 억제하고 앱 로그만 상세히 남긴다. `logs/`는 gitignore.
 포맷은 `%(asctime)s %(levelname)s [%(name)s] (%(filename)s:%(lineno)d) %(message)s` — 발생 위치(`파일명:라인번호`)를 포함해 로그만 보고 코드 지점을 바로 찾을 수 있게 한다.
+로거 이름은 툴뿐 아니라 공용 층도 쓰므로 **새 로거를 만들 때 기존 이름과 겹치지 않는지 확인할 것** — 예컨대 `no_gada.source`는 이미 `io/sftp.py`(SFTP I/O)가 쓰고 있어서, `app/tools/support/source.py`는 `no_gada.support`를 쓴다(같은 이름이면 I/O 로그와 라우터 로그가 구분되지 않음).
 
 ## 프로젝트 구조
 
@@ -194,7 +207,9 @@ app/
     proframe/db_schema.py     #   fetch_pk_columns (all_tables → 테이블별 PK 컬럼, io/db 위)
     proframe/refs.py          #   scan_module_refs (C 소스 → (type, id) 참조 스캔, 정규식 기반: dbio/biz/service/batch)
   tools/sql_bench/router.py   # SQL 텍스트 → 테이블
-  tools/meta/router.py        # GET /meta/resource-groups (ResourceGroup을 프론트에 노출 — 프론트 하드코딩 방지)
+  tools/support/              # 사이드바 도구가 아닌 공용 부가 API (app/common/과 달리 HTTP 경계)
+    meta.py                   #   GET /meta/resource-groups (ResourceGroup을 프론트에 노출 — 프론트 하드코딩 방지)
+    source.py                 #   GET /source/{module_type}/{file_id} (모듈 ID → 원격 소스 조회, 소스 보기 팝업용)
   tools/data_migration/
     router.py                 #   라우터, HTTP 상태 매핑
     service.py                 #   ExtractResult, extract()/extract_from_dbio()/extract_from_module()(재귀 DFS)/migrate_sql()
@@ -215,7 +230,8 @@ tests/
   common/test_sftp.py         # default_reader() 팩토리의 env(NOGADA_SFTP_*/_SOURCE_ENCODING) 반영 단위 테스트(네트워크 없음)
   common/test_ssh.py          # default_command_runner() 팩토리의 env 반영 단위 테스트(네트워크 없음)
   tools/test_sql_bench.py     # SQL Bench 회귀 케이스
-  tools/test_meta.py          # GET /meta/resource-groups 단위 테스트
+  tools/test_meta.py          # GET /meta/resource-groups 단위 테스트 (app/tools/support/meta.py)
+  tools/test_source.py        # GET /source/... 단위 테스트 (dbio/모듈 분기·에러 매핑·크기 가드, fake reader 주입)
   tools/test_data_migration.py  # Data Migration (dbio/재귀/라우터/pks/migrate-sql/excluded-tables/excluded-refs, fake reader·db 주입)
   tools/test_migrate.py       # 이관 SQL 생성 순수 함수(build_migration_sql: WHERE·제외·그룹핑)
   tools/test_excludes.py      # load/save_excluded_refs·load/save_excluded_tables 단위 테스트(인코딩 전환 포함)
