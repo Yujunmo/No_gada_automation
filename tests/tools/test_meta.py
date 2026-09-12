@@ -1,4 +1,4 @@
-"""app/tools/meta/router.py 단위 테스트.
+"""app/tools/support/meta.py 단위 테스트.
 
 ResourceGroup Literal이 그대로 노출되는지만 고정한다(순수 조회, I/O·네트워크 없음).
 """

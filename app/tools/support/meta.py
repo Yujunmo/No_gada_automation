@@ -1,4 +1,8 @@
-"""특정 툴에 속하지 않는 공용 ProFrame 참조 데이터 조회.
+"""특정 툴에 속하지 않는 공용 ProFrame 참조 데이터 조회 (app/tools/support/).
+
+사이드바 도구가 아니라 여러 툴 프론트가 공유하는 부가 API라 app/tools/support/에 둔다
+(app/tools/<name>/은 사이드바 도구 하나에 대응하는 규약). 라우터는 FastAPI에 의존하므로
+app/common/(HTTP를 전혀 모르는 층)에는 둘 수 없다.
 
 리소스그룹(업무그룹) 7종처럼 여러 툴 프론트가 각자 하드코딩해 쓰던 값을 백엔드
 `app.common.proframe.types.ResourceGroup`(FastAPI 경로 검증이 이미 쓰는 그 Literal) 하나로

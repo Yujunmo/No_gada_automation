@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.tools.data_migration.router import router as data_migration_router
 from app.tools.impact_analysis.router import router as impact_analysis_router
-from app.tools.meta.router import router as meta_router
+from app.tools.support.meta import router as meta_router
 from app.tools.sql_bench.router import router as sql_bench_router
 
 # 콘솔 + 회전 파일 양쪽에 로그 기록 (logs/no_gada.log, 5MB x 5개 보관)
