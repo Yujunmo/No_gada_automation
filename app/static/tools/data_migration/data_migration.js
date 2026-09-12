@@ -111,6 +111,19 @@
                 </div>
             </div>
         </div>
+
+        <div id="dm-source-modal" class="dm-modal-overlay" style="display:none;">
+            <div class="dm-modal dm-source-modal" role="dialog" aria-modal="true">
+                <div class="dm-modal-head">
+                    <span class="dm-modal-title" id="dm-source-title">모듈 소스</span>
+                    <div class="dm-modal-head-actions">
+                        <button id="dm-source-copy" class="btn-secondary">복사</button>
+                        <button id="dm-source-close" class="dm-modal-x" title="닫기" aria-label="닫기">&times;</button>
+                    </div>
+                </div>
+                <div id="dm-source-body" class="dm-modal-body"></div>
+            </div>
+        </div>
     `;
 
     var typeSel = container.querySelector('#dm-id-type');
@@ -125,6 +138,9 @@
     var pkModalFieldsEl = container.querySelector('#dm-pk-modal-fields');
     var datePkModalEl = container.querySelector('#dm-date-pk-modal');
     var datePkModalFieldsEl = container.querySelector('#dm-date-pk-modal-fields');
+    var sourceModalEl = container.querySelector('#dm-source-modal');
+    var sourceTitleEl = container.querySelector('#dm-source-title');
+    var sourceBodyEl = container.querySelector('#dm-source-body');
     var lastSql = '';   // '전체 복사'용 전체 SQL 캐시
     var PLACEHOLDER = {
         dbio: 'DBIO ID를 입력하세요 (여러 개는 쉼표로 구분해 입력하세요)',
@@ -630,6 +646,101 @@
         renderKeyin();   // 팝업에서 바뀐 값을 인라인 박스에도 반영
     }
 
+    // --- 모듈 소스 팝업(추출경로/batch 항목의 읽기 버튼) ---
+    // 조회는 요청마다 SFTP 세션을 새로 맺는 구조라(app/common/io/sftp.py의 default_reader가
+    // yield 의존성 — 응답 후 close) 같은 모듈을 다시 여는 비용이 접속 비용만큼 그대로 든다.
+    // 그래서 결과를 타입+ID 키로 캐시한다(새 추출 시작 시 비움).
+    var sourceCache = new Map();
+    var sourceReqId = 0;      // 응답 순서 역전 방어 — 마지막 요청의 응답만 화면에 반영한다
+    var lastSourceText = '';  // 헤드 '복사' 버튼용
+
+    var TYPE_LABEL = { dbio: 'DBIO', service: 'Service', batch: 'Batch', biz: 'Biz' };
+    // 전역 ERROR_TITLE과 따로 두는 이유: 503이 여기선 DB가 아니라 원격 SFTP 접속 실패다.
+    var SOURCE_ERROR_TITLE = {
+        400: '요청 오류',
+        404: '소스를 찾을 수 없음',
+        503: '원격 서버 연결 실패',
+    };
+
+    function renderSourceStatus(msg) {
+        lastSourceText = '';
+        sourceBodyEl.innerHTML = '<div class="dm-source-status">' + escapeHtml(msg) + '</div>';
+    }
+
+    function renderSourceError(title, detail) {
+        lastSourceText = '';
+        // 실패 사유는 토스트로 흘리지 않고 모달 안에 남긴다 — 어떤 모듈이 왜 실패했는지 계속 보여야 한다.
+        sourceBodyEl.innerHTML = '<div class="dm-source-error">'
+            + '<div class="dm-source-error-title">' + escapeHtml(title) + '</div>'
+            + '<div class="dm-source-error-detail">' + escapeHtml(detail) + '</div>'
+            + '</div>';
+    }
+
+    // 조회 성공 결과를 본문에 그린다. DBIO는 XML에 <sqlString>이 하나도 없으면 빈 내용이
+    // 정상 응답(200)으로 오므로, 에러가 아니라 빈 상태 문구로 구분해 보여준다.
+    function renderSourceContent(entry) {
+        lastSourceText = entry.text;
+        if (!entry.text) {
+            renderSourceStatus('표시할 소스 내용이 없습니다. (DBIO라면 XML에서 SQL을 찾지 못한 경우입니다)');
+            return;
+        }
+        var html = '<pre class="dm-source-code"></pre>';
+        if (entry.truncated) {
+            html += '<div class="dm-source-truncated">내용이 너무 커서 앞부분만 표시했습니다 — 전체는 원격 소스를 직접 확인하세요.</div>';
+        }
+        sourceBodyEl.innerHTML = html;
+        // 코드 본문은 textContent로 주입 — 이스케이프 누락 위험을 원천 제거한다.
+        sourceBodyEl.querySelector('.dm-source-code').textContent = entry.text;
+    }
+
+    async function openSourceModal(moduleType, fileId) {
+        sourceTitleEl.textContent = '[' + (TYPE_LABEL[moduleType] || moduleType) + '] ' + fileId;
+        sourceModalEl.style.display = 'flex';
+
+        var key = moduleType + ':' + fileId;
+        var cached = sourceCache.get(key);
+        if (cached) {
+            sourceReqId += 1;   // 진행 중이던 이전 요청의 늦은 응답이 이 화면을 덮어쓰지 않게
+            renderSourceContent(cached);
+            return;
+        }
+
+        // 원격 SFTP 접속이라 수 초 걸릴 수 있다(접속 timeout 10초). 응답을 기다렸다 모달을 열면
+        // "눌렀는데 무반응"으로 느껴지므로 먼저 열어 로딩을 보여준 뒤 채운다.
+        var reqId = ++sourceReqId;
+        renderSourceStatus('불러오는 중...');
+
+        try {
+            var res = await fetch('source/' + encodeURIComponent(moduleType) + '/' + encodeURIComponent(fileId));
+            // 에러 응답이 JSON이 아닐 수 있다(엔드포인트 부재 시 정적 파일 404, 프록시 502 등)
+            // — 그때 파싱 예외로 "요청 실패"라고 뭉뚱그리지 않고 상태코드를 그대로 보여준다.
+            var data = null;
+            try { data = await res.json(); } catch (_) { /* 아래에서 상태코드로 처리 */ }
+            if (reqId !== sourceReqId) return;   // 그 사이 다른 항목을 열었음 — 늦게 온 응답은 버린다
+            if (!res.ok) {
+                var detail = data && typeof data.detail === 'string' ? data.detail
+                           : data ? JSON.stringify(data.detail)
+                           : 'HTTP ' + res.status + ' ' + (res.statusText || '');
+                renderSourceError(SOURCE_ERROR_TITLE[res.status] || '조회 실패', detail.trim());
+                return;
+            }
+            if (!data) {
+                renderSourceError('조회 실패', '서버 응답을 해석할 수 없습니다.');
+                return;
+            }
+            var entry = { text: data.content || '', truncated: !!data.truncated };
+            sourceCache.set(key, entry);
+            renderSourceContent(entry);
+        } catch (e) {
+            if (reqId !== sourceReqId) return;
+            renderSourceError('소스 조회 요청 실패', e.message);
+        }
+    }
+
+    function closeSourceModal() {
+        sourceModalEl.style.display = 'none';
+    }
+
     // 이벤트 연결: 생성 버튼 + 모달 닫기/전체복사/배경클릭/Esc
     generateBtn.addEventListener('click', generateSql);
     container.querySelector('#dm-modal-close').addEventListener('click', closeModal);
@@ -654,12 +765,31 @@
     datePkModalEl.addEventListener('mousedown', function (e) {
         if (e.target === datePkModalEl) closeDatePkModal();
     });
+    // 읽기 버튼: 목록은 추출마다 새로 그려지고 항목이 수백 개까지 나올 수 있어, 항목마다 바인딩하지
+    // 않고 resultEl에 위임 리스너 하나만 건다. 그룹 토글(.dm-trace-toggle)로 클릭이 새지 않게 전파를 끊는다.
+    resultEl.addEventListener('click', function (e) {
+        var btn = e.target.closest('.dm-read-btn');
+        if (!btn) return;
+        e.stopPropagation();
+        var item = btn.closest('[data-type][data-id]');
+        if (!item) return;
+        openSourceModal(item.getAttribute('data-type'), item.getAttribute('data-id'));
+    });
+    container.querySelector('#dm-source-close').addEventListener('click', closeSourceModal);
+    container.querySelector('#dm-source-copy').addEventListener('click', function () {
+        if (!lastSourceText) { App.showToast('복사할 내용이 없습니다.'); return; }
+        App.copyToClipboard(lastSourceText, '소스가 복사되었습니다.');
+    });
+    sourceModalEl.addEventListener('mousedown', function (e) {
+        if (e.target === sourceModalEl) closeSourceModal();
+    });
     document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;
         if (modalEl.style.display !== 'none') closeModal();
         if (settingsModalEl.style.display !== 'none') closeSettingsModal();
         if (pkModalEl.style.display !== 'none') closePkModal();
         if (datePkModalEl.style.display !== 'none') closeDatePkModal();
+        if (sourceModalEl.style.display !== 'none') closeSourceModal();
     });
 
     // --- 설정 팝업(사이드 네비 + 패널) ---
@@ -902,9 +1032,26 @@
         }
     }
 
+    // 추출경로/batch 목록의 항목 하나 — ID + 소스 읽기 버튼.
+    // data-type/data-id를 달아두면 클릭 처리는 resultEl에 건 위임 리스너 하나가 전부 받는다
+    // (항목이 수백 개까지 나올 수 있어 개별 바인딩을 피한다).
+    var READ_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"'
+        + ' stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true">'
+        + '<path stroke-linecap="round" stroke-linejoin="round"'
+        + ' d="M9 12h6m-6 4h4m3 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414'
+        + 'a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>';
+
+    function renderModuleItem(cls, moduleType, id) {
+        return '<div class="' + cls + '" data-type="' + escapeHtml(moduleType) + '" data-id="' + escapeHtml(id) + '">'
+            + '<span class="dm-module-id" title="' + escapeHtml(id) + '">' + escapeHtml(id) + '</span>'
+            + '<button type="button" class="dm-read-btn" title="소스 보기" aria-label="소스 보기">' + READ_ICON + '</button>'
+            + '</div>';
+    }
+
     // 경유한 DBIO/service/biz 모듈 ID 한 그룹(추출경로 섹션의 하위 블록 하나) — 비어 있으면 렌더 안 함.
     // 그룹 제목이 곧 토글 버튼 — 기본은 접힌 상태, 클릭하면 목록이 나타난다.
-    function renderTraceGroup(label, ids) {
+    // moduleType은 항목의 읽기 버튼이 /source에 넘길 타입 — 라벨(표시용)과 별개로 받는다.
+    function renderTraceGroup(label, moduleType, ids) {
         if (!ids || !ids.length) return '';
         return `
             <div class="dm-trace-group">
@@ -915,7 +1062,7 @@
                 </button>
                 <div class="dm-trace-list dm-trace-list-collapsed">
                     ${ids.map(function (id) {
-                        return '<div class="dm-trace-item" title="' + escapeHtml(id) + '">' + escapeHtml(id) + '</div>';
+                        return renderModuleItem('dm-trace-item', moduleType, id);
                     }).join('')}
                 </div>
             </div>
@@ -965,7 +1112,7 @@
                 <div class="dm-batch-title">발견된 batch <span class="count-badge">${batches.length}개</span> <span class="dm-batch-note">참조된 배치는 직접 조회 요청. 자동 참조 기능 지원안함</span></div>
                 <div class="dm-batch-list">
                     ${batches.map(function (b) {
-                        return '<div class="dm-batch-item" title="' + escapeHtml(b) + '">' + escapeHtml(b) + '</div>';
+                        return renderModuleItem('dm-batch-item', 'batch', b);
                     }).join('')}
                 </div>
             </div>
@@ -977,7 +1124,9 @@
 
         // 추출경로: 경유한 DBIO/service/biz 모듈 ID — 셋 다 비어 있으면 섹션 자체를 생략한다.
         // 그룹별로 접혀 있다가 토글을 누르면 목록이 나타난다.
-        var traceBody = renderTraceGroup('DBIO', dbios) + renderTraceGroup('Service', services) + renderTraceGroup('Biz', bizs);
+        var traceBody = renderTraceGroup('DBIO', 'dbio', dbios)
+                      + renderTraceGroup('Service', 'service', services)
+                      + renderTraceGroup('Biz', 'biz', bizs);
         var traceSection = traceBody ? `
             <div class="dm-trace-section">
                 <div class="dm-trace-title">추출경로 <span class="dm-trace-note">추출 과정에서 경유한 모듈</span></div>
@@ -1181,6 +1330,7 @@
         }
 
         showSpinner();
+        sourceCache.clear();   // 이전 추출에서 본 소스는 버린다(같은 ID라도 결과 트리가 달라질 수 있음)
 
         try {
             var res = await fetch('data-migration/' + encodeURIComponent(idType) + '/extract-batch', {

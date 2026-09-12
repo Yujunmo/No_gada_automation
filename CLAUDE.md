@@ -181,6 +181,7 @@ UI에서 더 이상 직접 호출하지 않는다. 경로에 "batch"가 아니�
   - 크기 가드 `MAX_SOURCE_CHARS = 1_000_000`: 초과 시 413으로 막지 않고 앞부분만 잘라 `truncated=True`로 알린다(잘린 앞부분이라도 보는 게 "소스 보기" 목적에 맞음).
   - 에러 매핑: `UnknownSqlType`→400, `SourceNotFound`→404, `SourceError`→503.
   - **성능 주의**: `default_reader`가 yield 의존성이라 **요청마다 SFTP 세션을 새로 맺고 응답 후 닫는다**. 재귀 추출은 접속 하나를 수백 번의 read가 나눠 쓰지만 이 엔드포인트는 read 한 번이 접속 하나를 통째로 부담한다 — **체감 지연의 대부분은 경로 탐색이 아니라 SSH 핸드셰이크**다. 느리다고 경로 탐색을 최적화하지 말 것(반복 클릭 비용은 프론트 캐시가 흡수하고, find 폴백이 실제로 느리면 `scripts/build_module_group_map.py`로 `config/module_group_map.txt`를 채우는 게 정답).
+  - 프론트(`data_migration.js`): `.dm-trace-item`/`.dm-batch-item`에 `data-type`/`data-id` + 읽기 버튼을 달고, 클릭은 `#dm-result`에 건 **위임 리스너 하나**가 받는다. 결과는 `#dm-source-modal`에 표시하며 상태 5종(로딩/정상/잘림/실패/내용없음)을 가진다. 실패 사유는 토스트가 아니라 모달 안에 남긴다. `sourceCache`(`타입:ID` 키, 새 추출 시 clear)가 반복 클릭의 재접속을 없애고, `sourceReqId` 토큰이 느린 응답의 순서 역전을 막는다.
 
 ### 로깅
 로거 이름은 `no_gada.<tool>` 계층(예: 공용 SQL 추출은 `no_gada.sql`). `main.py`에서 콘솔 + `RotatingFileHandler`(`logs/no_gada.log`, 5MB×5)를 붙이고, **루트=INFO, `no_gada`=DEBUG**로 설정해 서드파티 DEBUG 노이즈는 억제하고 앱 로그만 상세히 남긴다. `logs/`는 gitignore.

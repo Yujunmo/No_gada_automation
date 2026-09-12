@@ -408,15 +408,16 @@
 }
 
 .dm-batch-item {
-    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 6px 8px 6px 12px;
     background: #ffffff;
     border: 1px solid var(--border-color);
     border-radius: 6px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 /* 추출경로: 경유한 DBIO/service/biz 모듈 ID (그룹별 토글, 기본은 접힌 상태) */
@@ -491,15 +492,53 @@
 }
 
 .dm-trace-item {
-    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 6px 8px 6px 12px;
     background: #ffffff;
     border: 1px solid var(--border-color);
     border-radius: 6px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
+}
+
+/* 항목 안의 ID 텍스트 — 남는 폭을 채우고 넘치면 말줄임(읽기 버튼 자리는 항상 확보) */
+.dm-module-id {
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* 소스 읽기 버튼 — hover 전용으로 숨기지 않고 항상 노출한다(숨기면 기능이 발견되지 않음) */
+.dm-read-btn {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.dm-read-btn:hover {
+    color: var(--text-main);
+    border-color: var(--border-color);
+    background: var(--bg-color);
+}
+
+.dm-read-btn:focus-visible {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(204, 107, 73, 0.12);
 }
 
 /* 이관 sql 위 공통 PK 키 입력 컴포넌트 — 제목(head) + 일반/날짜 PK 박스 2개(각자 스크롤).
@@ -1056,4 +1095,79 @@
     .dm-workspace {
         grid-template-columns: 1fr;
     }
+}
+
+/* --- 모듈 소스 팝업 (추출경로/batch 항목의 읽기 버튼) --- */
+/* 코드가 주 내용이라 이관 SQL 모달(820px)보다 넓고, 높이를 고정해 본문이 세로를 다 쓰게 한다. */
+.dm-source-modal {
+    max-width: 1040px;
+    height: 85vh;
+}
+
+.dm-source-modal .dm-modal-body {
+    flex: 1;
+    min-height: 0;
+    gap: 10px;
+}
+
+/* C 소스는 긴 줄이 많아 줄바꿈하지 않고 자체 가로 스크롤을 준다(textarea 대신 pre — 복사는 헤드 버튼 담당). */
+.dm-source-code {
+    flex: 1;
+    min-height: 0;
+    margin: 0;
+    padding: 14px;
+    overflow: auto;
+    white-space: pre;
+    tab-size: 4;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--text-main);
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+/* 로딩 / 빈 내용 — 본문 가운데 정렬 */
+.dm-source-status {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13.5px;
+}
+
+/* 실패는 토스트가 아니라 모달 안에 남긴다 — 어떤 모듈이 왜 실패했는지 계속 보여야 한다. */
+.dm-source-error {
+    flex: none;
+    padding: 14px 16px;
+    background: var(--error-bg);
+    border: 1px solid var(--error-border);
+    border-radius: 8px;
+}
+
+.dm-source-error-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--error-text);
+    margin-bottom: 6px;
+}
+
+.dm-source-error-detail {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--text-main);
+    word-break: break-all;
+}
+
+.dm-source-truncated {
+    flex: none;
+    padding: 8px 12px;
+    background: var(--bg-color);
+    border: 1px dashed var(--border-color);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 12px;
 }
