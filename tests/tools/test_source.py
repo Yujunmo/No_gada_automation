@@ -81,6 +81,12 @@ def _isolate_group_map(monkeypatch, tmp_path):
     monkeypatch.setenv("NOGADA_MODULE_GROUP_MAP_PATH", str(tmp_path / "no_such_map.txt"))
 
 
+@pytest.fixture(autouse=True)
+def _init_app_state():
+    app.state.resource_groups = ["NCOM", "NCSP", "PCOM", "PCSH", "PCSP", "PPFR", "RLGR"]
+    yield
+
+
 def _use_files(files: dict[str, str], dirs: dict[str, list[str]] | None = None) -> FakeReader:
     reader = FakeReader(files, dirs)
     app.dependency_overrides[default_reader] = lambda: reader

@@ -18,11 +18,11 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from app.common.io.sftp import SourceError, SourceNotFound, SourceReader, default_reader
-from app.common.proframe import Module_Type, ResourceGroup, dbio_sql
+from app.common.proframe import Module_Type, dbio_sql
 from app.common.proframe.dbio import UnknownSqlType, read_dbio_xml
 from app.common.proframe.module_source import load_group_map, read_module_source
 
@@ -62,7 +62,8 @@ def _read_dbio_sql(file_id: str, reader: SourceReader) -> str:
 def read_source(
     module_type: Module_Type,
     file_id: str,
-    resource_group: Optional[ResourceGroup] = None,
+    request: Request,
+    resource_group: Optional[str] = None,
     reader: SourceReader = Depends(default_reader),
 ) -> SourceResponse:
     """module_type/ID (+업무그룹) → 원격 소스 내용.
@@ -79,6 +80,10 @@ def read_source(
     if not ident:
         logger.warning("read_source 거부: 빈 ID")
         raise HTTPException(status_code=400, detail="file_id is empty")
+
+    if resource_group is not None and resource_group not in request.app.state.resource_groups:
+        logger.warning("read_source 거부: 유효하지 않은 resource_group=%s", resource_group)
+        raise HTTPException(status_code=422, detail=f"Unknown resource group: {resource_group}")
 
     try:
         if module_type == "dbio":

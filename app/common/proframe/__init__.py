@@ -10,7 +10,6 @@ from __future__ import annotations
 from app.common.proframe.types import (
     PROFRAME_ROOT,
     Module_Type,
-    ResourceGroup,
 )
 
-__all__ = ["PROFRAME_ROOT", "Module_Type", "ResourceGroup"]
+__all__ = ["PROFRAME_ROOT", "Module_Type"]

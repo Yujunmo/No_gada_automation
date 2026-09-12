@@ -55,6 +55,13 @@ client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
+def _init_app_state():
+    # resource_groups를 app.state에 초기화 (main.py의 lifespan이 실행되지 않으므로 수동 설정)
+    app.state.resource_groups = ["NCOM", "NCSP", "PCOM", "PCSH", "PCSP", "PPFR", "RLGR"]
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _fake_reader_override():
     # 기본은 빈 reader(무조건 SourceNotFound) — 실네트워크 접속을 막는다.
     # 특정 파일이 필요한 테스트는 아래에서 다시 override해서 덮어쓴다.
@@ -256,7 +263,7 @@ def test_extract_from_module_batch_ref_recorded_not_recursed():
     svc_path = module_path("service", "RLGR", "SRLGR96602A")
     reader = FakeReader({svc_path: src}, dirs={COMPILE_ROOT: ["RLGR"]})
 
-    result = service.extract_from_module("service", "RLGR", "SRLGR96602A", reader)
+    result = service.extract_from_module("service", "RLGR", "SRLGR96602A", reader, resource_groups=["RLGR"])
 
     assert result.batches == ["BRLGRPRP0001"]
     assert result.services == ["SRLGR96602A"]  # 진입 모듈 자기 자신(biz 참조 MZPFM_BatchLinkCall은 소스 없어 skip)

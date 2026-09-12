@@ -111,7 +111,7 @@ def find_callers(
             logger.debug("find_callers: 후보 skip(파일 없음) path=%s", path)
             continue
 
-        if (ref_type, ident) not in scan_module_refs(src):
+        if (ref_type, ident) not in scan_module_refs(src, resource_groups=resource_groups):
             continue
 
         if module_type == "service":

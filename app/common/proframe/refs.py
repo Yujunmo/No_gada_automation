@@ -25,10 +25,9 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import get_args
 
 from app.common.parse.c_source import strip_comments
-from app.common.proframe.types import Module_Type, ResourceGroup
+from app.common.proframe.types import Module_Type
 
 logger = logging.getLogger("no_gada.proframe")
 
@@ -38,27 +37,33 @@ _DBIO_RE = re.compile(r'pfmDbio\w*\(\s*"([A-Z0-9_]+)"')
 _BIZ_RE = re.compile(r'pfmDlCall\(\s*"([A-Za-z0-9_]+)"')
 # pfmServiceModuleCall(&in, &out, &linkHeader, sizeof(ID_IN), ...) — 구조체명에서 ID 추출.
 _SERVICE_RE = re.compile(r'pfmServiceModuleCall\([\s\S]{0,300}?sizeof\(\s*([A-Za-z]\w*)_IN\b')
-# "B<업무그룹4자리><suffix>" — 콜 매크로 인자가 아니라 파일 전체 리터럴 스캔.
-# 업무그룹 7종은 types.py의 ResourceGroup이 유일한 소스 — 여기서 하드코딩하지 않고 끌어온다.
-_RESOURCE_GROUP_ALT = "|".join(get_args(ResourceGroup))
-_BATCH_RE = re.compile(rf'"(B(?:{_RESOURCE_GROUP_ALT})[A-Z0-9]+)"')
-
-_PATTERNS: tuple[tuple[Module_Type, "re.Pattern[str]"], ...] = (
-    ("dbio", _DBIO_RE),
-    ("biz", _BIZ_RE),
-    ("service", _SERVICE_RE),
-    ("batch", _BATCH_RE),
-)
 
 
-def scan_module_refs(text: str) -> list[tuple[Module_Type, str]]:
-    """C 소스 텍스트에서 (타입, ID) 참조를 등장 순서대로, 중복 제거해 뽑는다."""
+def scan_module_refs(text: str, resource_groups: list[str] | None = None) -> list[tuple[Module_Type, str]]:
+    """C 소스 텍스트에서 (타입, ID) 참조를 등장 순서대로, 중복 제거해 뽑는다.
+
+    resource_groups는 batch 패턴 감지에 필요. 미제공 시 빈 목록으로 처리해 batch 감지 안 함.
+    """
+    if resource_groups is None:
+        resource_groups = []
+
     cleaned, removed = strip_comments(text)
     if removed:
         logger.debug("scan_module_refs: 주석 %d개 제거", removed)
 
+    # "B<업무그룹4자리><suffix>" batch 패턴 — 동적 빌드
+    _RESOURCE_GROUP_ALT = "|".join(resource_groups) if resource_groups else "(?!)"
+    _BATCH_RE = re.compile(rf'"(B(?:{_RESOURCE_GROUP_ALT})[A-Z0-9]+)"')
+
+    patterns: list[tuple[Module_Type, re.Pattern[str]]] = [
+        ("dbio", _DBIO_RE),
+        ("biz", _BIZ_RE),
+        ("service", _SERVICE_RE),
+        ("batch", _BATCH_RE),
+    ]
+
     matches: list[tuple[int, Module_Type, str]] = []
-    for ref_type, pattern in _PATTERNS:
+    for ref_type, pattern in patterns:
         for m in pattern.finditer(cleaned):
             matches.append((m.start(), ref_type, m.group(1)))
     matches.sort(key=lambda item: item[0])

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from typing import Literal, Optional
@@ -10,7 +10,7 @@ from typing import Literal, Optional
 from app.common.io.db import DbClient, DbError, QueryError, default_db
 from app.common.io.sftp import SourceError, SourceNotFound, SourceReader, default_reader
 from app.common.parse.sql import ExtractionError
-from app.common.proframe import Module_Type, ResourceGroup
+from app.common.proframe import Module_Type
 from app.common.proframe import db_schema
 from app.common.proframe.dbio import UnknownSqlType
 from app.tools.data_migration import migrate, service
@@ -38,8 +38,8 @@ MAX_BATCH_FILE_IDS = 50  # SFTP 재귀 탐색이 ID마다 새로 도는 구조�
 
 
 class BatchExtractRequest(BaseModel):
-    resource_group: Optional[ResourceGroup] = None  # dbio에서는 생략, 그 외 타입은 필수(라우터에서 검증)
-    file_ids: list[str]                              # 여러 ID(프론트가 쉼표로 파싱한 목록, 순서 보존)
+    resource_group: Optional[str] = None  # dbio에서는 생략, 그 외 타입은 필수(라우터에서 검증)
+    file_ids: list[str]                   # 여러 ID(프론트가 쉼표로 파싱한 목록, 순서 보존)
 
 
 class BatchFailedItem(BaseModel):
@@ -112,13 +112,14 @@ class ExcludedRefsOut(BaseModel):
 
 # DBIO는 resource_group이 파일 경로에 쓰이지 않아 2세그먼트(생략) 경로를 허용한다.
 # Service/Batch/Biz는 resource_group이 필요하므로 3세그먼트 경로로 받는다(둘 다 같은 핸들러).
-# 단건 조회 라우트 — extract-batch 도입(여러 ID 동시 추출) 이후 프론트는 이 라우트를 더 이상 호출하지 않는다. API·회귀 테스트 계약 유지 목적으로 남겨둠.
+# @@@단건 조회 라우트 — extract-batch 도입(여러 ID 동시 추출) 이후 프론트는 이 라우트를 더 이상 호출하지 않는다. API·회귀 테스트 계약 유지 목적으로 남겨둠.@@@
 @router.get("/{module_type}/{file_id}", response_model=ExtractResponse)
 @router.get("/{module_type}/{resource_group}/{file_id}", response_model=ExtractResponse)
 def extract(
     module_type: Module_Type,
     file_id: str,
-    resource_group: Optional[ResourceGroup] = None,
+    request: Request,
+    resource_group: Optional[str] = None,
     reader: SourceReader = Depends(default_reader),
 ) -> ExtractResponse:
     """module_type/(resource_group)/ID → 원격 소스 → 참조 테이블 추출(dbio는 리프, 나머지는 재귀).
@@ -138,8 +139,12 @@ def extract(
         logger.warning("extract 거부: resource_group 누락 module_type=%s", module_type)
         raise HTTPException(status_code=400, detail=f"resource_group required for {module_type}")
 
+    if resource_group is not None and resource_group not in request.app.state.resource_groups:
+        logger.warning("extract 거부: 유효하지 않은 resource_group=%s", resource_group)
+        raise HTTPException(status_code=422, detail=f"Unknown resource group: {resource_group}")
+
     try:
-        result = service.extract(module_type, resource_group, ident, reader)
+        result = service.extract(module_type, resource_group, ident, reader, resource_groups=request.app.state.resource_groups)
     except UnknownSqlType as e:
         logger.warning("extract 거부(ID 패턴 인식 불가): %s", e)
         raise HTTPException(status_code=400, detail=str(e))
@@ -167,6 +172,7 @@ def extract(
 def extract_batch(
     module_type: Module_Type,
     req: BatchExtractRequest,
+    request: Request,
     reader: SourceReader = Depends(default_reader),
 ) -> BatchExtractResponse:
     """module_type(+resource_group) + 여러 file_id → 병합된 결과 + 항목별 성공/실패.
@@ -189,8 +195,11 @@ def extract_batch(
     if module_type != "dbio" and req.resource_group is None:
         logger.warning("extract_batch 거부: resource_group 누락 module_type=%s", module_type)
         raise HTTPException(status_code=400, detail=f"resource_group required for {module_type}")
+    if req.resource_group is not None and req.resource_group not in request.app.state.resource_groups:
+        logger.warning("extract_batch 거부: 유효하지 않은 resource_group=%s", req.resource_group)
+        raise HTTPException(status_code=422, detail=f"Unknown resource group: {req.resource_group}")
 
-    result = service.extract_batch(module_type, req.resource_group, req.file_ids, reader)
+    result = service.extract_batch(module_type, req.resource_group, req.file_ids, reader, resource_groups=request.app.state.resource_groups)
 
     def _status_for(e: Exception) -> int:
         if isinstance(e, (UnknownSqlType, ExtractionError)):

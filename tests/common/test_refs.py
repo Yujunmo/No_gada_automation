@@ -56,7 +56,7 @@ def test_batch_literal_and_biz_batchlinkcall_both_captured():
     # 그걸 감싸는 pfmDlCall("MZPFM_BatchLinkCall", ...) 자체는 biz로도 같이 잡힌다
     # (그 이름의 소스 파일은 없어 재귀 중 skip되는 게 의도된 부분성공).
     src = (COMPILE_ROOT / "RLGR/src/serviceModule/SRLGR96602A/SRLGR96602A.c").read_text("utf-8")
-    refs = scan_module_refs(src)
+    refs = scan_module_refs(src, resource_groups=["RLGR"])
     assert ("batch", "BRLGRPRP0001") in refs
     assert ("biz", "MZPFM_BatchLinkCall") in refs
 

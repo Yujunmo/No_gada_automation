@@ -7,7 +7,7 @@ from typing import Optional
 from app.common.io.db import DbClient
 from app.common.io.sftp import SourceError, SourceNotFound, SourceReader
 from app.common.parse.sql import ExtractionError
-from app.common.proframe import Module_Type, ResourceGroup
+from app.common.proframe import Module_Type
 from app.common.proframe import db_schema
 from app.common.proframe.dbio import UnknownSqlType, dbio_referenced_tables
 from app.common.proframe.module_source import load_group_map, read_module_source
@@ -44,7 +44,7 @@ class BatchExtractResult:
     failed: list[FailedItem] = field(default_factory=list)
 
 
-def extract(module_type: Module_Type, resource_group: Optional[ResourceGroup], file_id: str, reader: SourceReader) -> ExtractResult:
+def extract(module_type: Module_Type, resource_group: Optional[str], file_id: str, reader: SourceReader, resource_groups: list[str] | None = None) -> ExtractResult:
     """module_type/(resource_group)/ID → 원격 소스 → 참조 테이블 추출.
 
     dbio는 참조가 없는 리프라 extract_from_dbio로 바로 끝나고, service/batch/biz는
@@ -52,10 +52,12 @@ def extract(module_type: Module_Type, resource_group: Optional[ResourceGroup], f
     excluded_tables.txt(설정 팝업에서 등록한, 이관이 항상 불필요한 테이블) 목록으로
     최종 tables만 걸러낸다 — dbios/services/bizs 등 추출근거 트레이스는 그대로 둔다.
     """
+    if resource_groups is None:
+        resource_groups = []
     if module_type == "dbio":
         result = extract_from_dbio(file_id, reader)
     else:
-        result = extract_from_module(module_type, resource_group, file_id, reader)
+        result = extract_from_module(module_type, resource_group, file_id, reader, resource_groups=resource_groups)
 
     excluded = load_excluded_tables()
     if excluded:
@@ -66,9 +68,10 @@ def extract(module_type: Module_Type, resource_group: Optional[ResourceGroup], f
 
 def extract_batch(
     module_type: Module_Type,
-    resource_group: Optional[ResourceGroup],
+    resource_group: Optional[str],
     file_ids: list[str],
     reader: SourceReader,
+    resource_groups: list[str] | None = None,
 ) -> BatchExtractResult:
     """여러 file_id를 순차로 extract() 호출 → 성공은 UNION 병합, 실패는 개별 기록(부분성공).
 
@@ -101,7 +104,7 @@ def extract_batch(
 
     for fid in cleaned_ids:
         try:
-            result = extract(module_type, resource_group, fid, reader)
+            result = extract(module_type, resource_group, fid, reader, resource_groups=resource_groups)
         except (SourceNotFound, SourceError, UnknownSqlType, ExtractionError) as e:
             logger.warning("extract_batch: 항목 실패(skip) file_id=%s: %s", fid, e)
             failed.append(FailedItem(file_id=fid, error=e))
@@ -143,6 +146,7 @@ def extract_from_module(
     visited: Optional[set[str]] = None,
     excluded: Optional[set[str]] = None,
     group_map: Optional[dict[tuple[str, str], str]] = None,
+    resource_groups: list[str] | None = None,
 ) -> ExtractResult:
     """service/batch/biz 모듈 → 참조를 재귀적으로 따라가 도달한 DBIO의 테이블을 합산.
 
@@ -159,6 +163,9 @@ def extract_from_module(
     excluded와 동일하게 최초 호출 시 load_group_map()으로 1회 로드해 재귀 전체에 그대로
     전달한다 — 매핑에 없거나 틀려도 read_module_source가 순차 탐색으로 알아서 폴백하므로
     안전하다.
+
+    resource_groups는 batch 모듈 정규식 패턴 생성에 필요한 업무그룹 목록(동적 로딩 값)이라
+    scan_module_refs에 그대로 전달된다.
     """
     top_level = visited is None
     if visited is None:
@@ -167,6 +174,8 @@ def extract_from_module(
         excluded = load_excluded_refs()
     if group_map is None:
         group_map = load_group_map()
+    if resource_groups is None:
+        resource_groups = []
     visited.add(file_id)
 
     try:
@@ -194,7 +203,7 @@ def extract_from_module(
     elif module_type == "biz":
         bizs.add(file_id)
 
-    refs = scan_module_refs(text)
+    refs = scan_module_refs(text, resource_groups=resource_groups)
     logger.debug("extract_from_module: 참조 %d개 발견 file_id=%s", len(refs), file_id)
 
     tables: set[str] = set()
@@ -227,7 +236,7 @@ def extract_from_module(
         else:
             # 재귀 중 발견된 참조는 업무그룹을 모르므로 resource_group=None → find.
             result = extract_from_module(
-                ref_type, None, ref_id, reader, visited=visited, excluded=excluded, group_map=group_map
+                ref_type, None, ref_id, reader, visited=visited, excluded=excluded, group_map=group_map, resource_groups=resource_groups
             )
 
         tables.update(result.tables)

@@ -226,6 +226,12 @@ def test_find_callers_scopes_grep_to_resource_groups():
 # ---- router ----
 
 @pytest.fixture(autouse=True)
+def _init_app_state():
+    app.state.resource_groups = ["NCOM", "NCSP", "PCOM", "PCSH", "PCSP", "PPFR", "RLGR"]
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _fake_deps_override():
     app.dependency_overrides[default_command_runner] = lambda: FakeSearcher([])
     app.dependency_overrides[default_reader] = lambda: FakeReader({})

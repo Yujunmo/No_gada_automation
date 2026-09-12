@@ -6,12 +6,15 @@ load_dotenv()
 
 import logging
 import os
+from contextlib import asynccontextmanager
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from app.common.io.ssh import default_command_runner
+from app.common.proframe.types import PROFRAME_ROOT
 from app.tools.data_migration.router import router as data_migration_router
 from app.tools.impact_analysis.router import router as impact_analysis_router
 from app.tools.support.meta import router as meta_router
@@ -43,7 +46,26 @@ _file_handler.setFormatter(_log_formatter)
 logging.basicConfig(level=logging.INFO, handlers=[_console_handler, _file_handler])
 logging.getLogger("no_gada").setLevel(logging.DEBUG)
 
-app = FastAPI(title="No_Gada")
+logger = logging.getLogger("no_gada.main")
+
+COMPILE_ROOT = f"{PROFRAME_ROOT}/compile"
+
+
+# 리소스그룹 데이터를 가져와서 세션 메모리에 올림
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    gen = default_command_runner()
+    runner = next(gen)
+    try:
+        result = runner.run(["ls", COMPILE_ROOT])
+        app.state.resource_groups = sorted(result.stdout.strip().split())
+        logger.info("Loaded %d resource groups from SSH", len(app.state.resource_groups))
+    finally:
+        gen.close()  # generator의 finally 블록(conn.close())을 트리거
+    yield
+
+
+app = FastAPI(title="No_Gada", lifespan=lifespan)
 
 app.include_router(sql_bench_router)
 app.include_router(data_migration_router)
