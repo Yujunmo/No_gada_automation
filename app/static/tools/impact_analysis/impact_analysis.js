@@ -30,11 +30,12 @@
         </form>
 
         <div class="ia-workspace">
-            <div class="card ia-panel">
+            <div class="card ia-panel" id="ia-panel-left">
                 <div class="ia-panel-title">검색 결과</div>
                 <div class="ia-results" id="ia-results"></div>
             </div>
-            <div class="card ia-panel">
+            <div class="ia-splitter" id="ia-splitter"></div>
+            <div class="card ia-panel" id="ia-panel-right">
                 <div class="ia-panel-title">
                     <span>집계</span>
                     <button type="button" class="copy-btn" id="ia-summary-copy-btn" title="집계 결과 전체 복사">
@@ -235,6 +236,39 @@
         App.copyToClipboard(lines.join('\n'), '집계 결과가 클립보드에 복사되었습니다.');
     });
 
+    // 스플리터 드래그 로직 — 좌우 패널 비율 조정
+    var workspace = container.querySelector('.ia-workspace');
+    var leftPanel = container.querySelector('#ia-panel-left');
+    var splitter = container.querySelector('#ia-splitter');
+    var rightPanel = container.querySelector('#ia-panel-right');
+
+    splitter.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        var startX = e.clientX;
+        var startLeftWidth = leftPanel.offsetWidth;
+        splitter.classList.add('dragging');
+        leftPanel.style.flex = 'none';
+        rightPanel.style.flex = '1';
+
+        function onMouseMove(e) {
+            var delta = e.clientX - startX;
+            var newWidth = startLeftWidth + delta;
+            var min = 200;
+            var max = workspace.offsetWidth - splitter.offsetWidth - min;
+            newWidth = Math.max(min, Math.min(max, newWidth));
+            leftPanel.style.width = newWidth + 'px';
+        }
+
+        function onMouseUp() {
+            splitter.classList.remove('dragging');
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    });
+
     // 현재 펼쳐가고 있는 조상 체인(루트→현재 직전까지의 {refType, refId} 목록). Biz는
     // 서로를 순환 참조할 수 있어(A가 B를 부르고 B가 다시 A를 부르는 등), 그 체인에 이미
     // 있는 id를 다시 후보로 보여주면 사용자가 끝없이 펼치는 루프에 빠질 수 있다 — 그래서
@@ -265,14 +299,23 @@
         var li = document.createElement('li');
         li.className = 'ia-dbio-item';
         li.innerHTML = `
-            <button type="button" class="ia-dbio-toggle" aria-expanded="false">
-                <span class="ia-dbio-chevron">▶</span>
-                <span class="ia-dbio-id">${escapeHtml(refId)}</span>
-            </button>
+            <div class="ia-dbio-header">
+                <button type="button" class="ia-dbio-toggle" aria-expanded="false">
+                    <span class="ia-dbio-chevron">▶</span>
+                    <span class="ia-dbio-id">${escapeHtml(refId)}</span>
+                </button>
+                <button type="button" class="copy-btn" title="ID 복사">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke-width="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-width="2"></path>
+                    </svg>
+                </button>
+            </div>
             <div class="ia-dbio-body ia-dbio-body-collapsed"></div>
         `;
         var btn = li.querySelector('.ia-dbio-toggle');
         var body = li.querySelector('.ia-dbio-body');
+        var copyBtn = li.querySelector('.copy-btn');
 
         btn.addEventListener('click', function () {
             var wasExpanded = btn.getAttribute('aria-expanded') === 'true';
@@ -283,6 +326,11 @@
             if (!wasExpanded && !body.dataset.loaded) {
                 loadCallers(refType, refId, body, ancestors.concat([{ refType: refType, refId: refId }]));
             }
+        });
+
+        copyBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            App.copyToClipboard(refId, '"' + refId + '" ID가 복사되었습니다.');
         });
 
         return li;
