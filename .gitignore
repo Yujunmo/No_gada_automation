@@ -25,6 +25,7 @@ htmlcov/
 .DS_Store
 
 logs/
+settings.conf
 
 
 test.ipynb

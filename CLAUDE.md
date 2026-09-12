@@ -20,8 +20,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
-# 로컬 개발 env (python-dotenv가 app/main.py 기동 시 .env를 자동 로드)
-cp .env.example .env
+# 로컬 개발 env (python-dotenv가 app/main.py 기동 시 settings.conf를 자동 로드)
+# settings.conf 파일을 레포 루트에 직접 생성하고 값을 채운다 (settings.conf는 gitignore됨)
 
 # 개발 서버 (http://localhost:8000)
 uvicorn app.main:app --reload
@@ -33,7 +33,7 @@ uvicorn app.main:app --reload
 pip install -e ".[oracle]"                         # oracledb 드라이버 (기본 설치에는 없음)
 (cd remote_oracle_server && docker compose up -d)  # 정지: docker compose down / 초기화: down -v
 
-# 데이터 조회용 로컬 MySQL (대안 리허설 — .env의 NOGADA_DB_DIALECT를 mysql+pymysql로 바꾸면 전환)
+# 데이터 조회용 로컬 MySQL (대안 리허설 — settings.conf의 NOGADA_DB_DIALECT를 mysql+pymysql로 바꾸면 전환)
 (cd remote_db_server && docker compose up -d)      # 정지: docker compose down / 초기화: down -v
 
 # 전체 테스트 (pyproject에 -v 기본 적용, 현재 202개 수집)
@@ -49,7 +49,7 @@ pytest -k dual
 ## 아키텍처 (큰 그림)
 
 ### 멀티툴 플러그인 구조
-`app/main.py`가 각 도구의 `router`를 `include_router`로 붙이고, 마지막에 `StaticFiles`를 `/`에 마운트한다. **정적 파일 마운트는 반드시 라우터 뒤**에 와야 API 경로가 가려지지 않는다. 각 도구 라우터는 자기 네임스페이스를 갖는다: `APIRouter(prefix="/sql-bench")` → `POST /sql-bench/extract`. `main.py`는 다른 어떤 import보다 먼저 `load_dotenv()`를 호출해 `.env`를 `os.environ`에 반영한다(아래 "환경변수(.env)" 참고).
+`app/main.py`가 각 도구의 `router`를 `include_router`로 붙이고, 마지막에 `StaticFiles`를 `/`에 마운트한다. **정적 파일 마운트는 반드시 라우터 뒤**에 와야 API 경로가 가려지지 않는다. 각 도구 라우터는 자기 네임스페이스를 갖는다: `APIRouter(prefix="/sql-bench")` → `POST /sql-bench/extract`. `main.py`는 다른 어떤 import보다 먼저 `load_dotenv()`를 호출해 `settings.conf`(레포 루트)를 `os.environ`에 반영한다(아래 "환경변수(settings.conf)" 참고).
 
 ### 새 도구 추가 레시피 (여러 파일에 걸침)
 1. `app/tools/<name>/`에 `__init__.py`, `router.py`(`APIRouter(prefix="/<name>")`), 필요 시 `service.py`.
@@ -96,8 +96,8 @@ pytest -k dual
 - `proframe/db_schema.py`의 `fetch_pk_columns(tables, db) -> {테이블: [PK컬럼]}`: `all_tables`(테이블→PK컬럼 매핑, 복합키는 여러 행)를 **1회 쿼리**로 조회해 테이블별 PK 컬럼을 돌려주는 딕셔너리 조회 도메인 로직. 입력을 대문자·중복 정규화하고 요청한 모든 테이블을 키로 포함(딕셔너리에 없으면 `[]`), 컬럼 순서는 DB 행 순서 보존. `io/db.py` 위에 얹힌 층. data_migration의 `/pks`·`/migrate-sql`이 사용.
 - `proframe/refs.py`의 `scan_module_refs(text) -> list[tuple[Module_Type, str]]`(`dbio_sql.py`의 자매): C 소스 텍스트에서 콜 매크로 기반으로 `(타입, ID)` 참조를 등장순·중복제거로 뽑는다(`pfmDbio*`=dbio, `pfmDlCall`=biz, `pfmServiceModuleCall`=service, batch는 전용 매크로가 없어 `"B<업무그룹><suffix>"` 리터럴 패턴으로 별도 스캔). 정규식 매칭 전 `c_source.strip_comments`로 주석 속 죽은 코드를 걷어낸다. data_migration이 정방향(모듈 소스 → 참조 대상)에 먼저 썼고, impact_analysis의 역방향(참조 후보를 찾은 뒤 실제 참조인지 확정)도 같은 파싱이 필요해 공용으로 승격.
 
-### 환경변수(`.env`)
-`python-dotenv`가 core dependency이고, `app/main.py`가 다른 어떤 것보다 먼저 `load_dotenv()`를 호출해 `.env`(레포 루트)를 `os.environ`에 반영한다. 이미 export된 OS 환경변수는 `.env` 값보다 우선한다(`load_dotenv()` 기본 `override=False`). 템플릿은 `.env.example`(커밋됨) — `cp .env.example .env`로 시작. 대상 15개 변수: `NOGADA_DB_*`(6, 위 `io/db.py` 참고 — 템플릿은 MySQL 블록이 활성화·Oracle 블록은 주석으로 나란히 제공), `NOGADA_SFTP_*`(5, `io/sftp.py`) + `NOGADA_SOURCE_ENCODING`(SFTP/SSH 공용 디코딩 인코딩, 기본 `utf-8`), `NOGADA_EXCLUDED_REFS_PATH`/`NOGADA_MODULE_GROUP_MAP_PATH`/`NOGADA_EXCLUDED_TABLES_PATH`(경로 오버라이드 3종, 기본값 그대로면 생략 가능). **주의**: 코드의 하드코딩 기본값(`_build_url_from_env()`)은 Oracle이지만 `.env.example`의 활성 블록은 MySQL이 먼저 온다 — `.env`를 만들지 않고 그냥 실행하면 Oracle 기본값으로, `.env.example`을 그대로 복사하면 MySQL로 붙는다는 차이를 인지할 것.
+### 환경변수(`settings.conf`)
+`python-dotenv`가 core dependency이고, `app/main.py`가 다른 어떤 것보다 먼저 `load_dotenv(dotenv_path=.../"settings.conf")`를 호출해 `settings.conf`(레포 루트)를 `os.environ`에 반영한다. 이미 export된 OS 환경변수는 `settings.conf` 값보다 우선한다(`load_dotenv()` 기본 `override=False`). `settings.conf`는 gitignore됨 — 레포 루트에 직접 생성하고 값을 채운다. 대상 15개 변수: `NOGADA_DB_*`(6, 위 `io/db.py` 참고), `NOGADA_SFTP_*`(5, `io/sftp.py`) + `NOGADA_SOURCE_ENCODING`(SFTP/SSH 공용 디코딩 인코딩, 기본 `utf-8`), `NOGADA_EXCLUDED_REFS_PATH`/`NOGADA_MODULE_GROUP_MAP_PATH`/`NOGADA_EXCLUDED_TABLES_PATH`(경로 오버라이드 3종, 기본값 그대로면 생략 가능). **주의**: 코드의 하드코딩 기본값(`_build_url_from_env()`)은 Oracle — `settings.conf` 없이 실행하면 Oracle 기본값(127.0.0.1:1521)으로 동작한다.
 
 ### Data Migration 파이프라인
 `sql_bench`가 SQL 텍스트를 직접 받는 반면, `data_migration`는 **식별자(module_type/(resource_group)/file_id)로 원격 파일을 찾아 읽은 뒤** 그 안팎의 SQL/참조를 재귀적으로 추적해 테이블을 추출한다. REST 계약은 부작용 없는 조회라 경로 파라미터 GET(바디 없음)이며, **`resource_group`은 옵셔널**이다 — 같은 핸들러에 라우트 2개를 붙여 **DBIO는 `GET /data-migration/{module_type}/{file_id}`(2세그먼트, resource_group 생략)**, **그 외(Service/Batch/Biz)는 `GET /data-migration/{module_type}/{resource_group}/{file_id}`(3세그먼트, 필수)**로 받는다. DBIO는 resource_group을 파일 경로에 쓰지 않아 생략 가능(3세그먼트로 줘도 하위호환 동작, 값은 무시). 프론트는 module_type이 dbio면 세그먼트를 빼고 콤보박스도 숨긴다. `module_type`/`resource_group`은 `Literal`(공용 `proframe/types.py`)이라 잘못된 값은 FastAPI가 422로 자동 거부.
@@ -241,7 +241,7 @@ config/
   excluded_refs.txt           # NOGADA_EXCLUDED_REFS_PATH 기본 경로(재귀 참조 제외, 설정 팝업 "모듈 예외처리" 탭이 저장)
   excluded_tables.txt         # NOGADA_EXCLUDED_TABLES_PATH 기본 경로(추출 결과 테이블 제외, 설정 팝업 "테이블 추출 예외처리" 탭이 저장, 최초 저장 전엔 파일 없음)
   module_group_map.txt        # NOGADA_MODULE_GROUP_MAP_PATH 기본 경로
-.env.example                  # NOGADA_* env 템플릿 (python-dotenv가 실제 .env를 자동 로드)
+settings.conf                 # NOGADA_* 환경변수 설정 파일 (gitignore됨, 레포 루트에 직접 생성)
 remote_ssh_server/             # 개발용 로컬 SSH+SFTP + 실물 DBIO/모듈 소스 픽스처, 127.0.0.1:2222
 remote_db_server/             # 개발용 로컬 MySQL(mysql:8.0), 127.0.0.1:3306, all_tables 시드
 remote_oracle_server/         # 개발용 로컬 Oracle(gvenzl/oracle-free), 127.0.0.1:1521, all_tables 동일 시드(기본 대상)
