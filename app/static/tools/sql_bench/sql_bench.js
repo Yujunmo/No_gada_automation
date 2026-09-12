@@ -5,7 +5,6 @@
     container.innerHTML = `
         <div class="header">
             <div class="badge">SQL 파싱 도구</div>
-            <h1>SQL Bench</h1>
             <p>Oracle SQL 자동 가공 도구. SQL을 입력하면 다양한 방식으로 가공합니다.</p>
         </div>
 
