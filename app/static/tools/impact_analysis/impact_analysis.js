@@ -50,6 +50,19 @@
                 <div class="ia-summary" id="ia-summary"></div>
             </div>
         </div>
+
+        <div id="ia-source-modal" class="dm-modal-overlay" style="display:none;">
+            <div class="dm-modal dm-source-modal" role="dialog" aria-modal="true">
+                <div class="dm-modal-head">
+                    <span class="dm-modal-title" id="ia-source-title">모듈 소스</span>
+                    <div class="dm-modal-head-actions">
+                        <button id="ia-source-copy" class="btn-secondary">복사</button>
+                        <button id="ia-source-close" class="dm-modal-x" title="닫기" aria-label="닫기">&times;</button>
+                    </div>
+                </div>
+                <div id="ia-source-body" class="dm-modal-body"></div>
+            </div>
+        </div>
     `;
 
     var form = container.querySelector('#ia-search-form');
@@ -59,7 +72,22 @@
     var summaryEl = container.querySelector('#ia-summary');
     var summaryCopyBtn = container.querySelector('#ia-summary-copy-btn');
     var resultFilterInput = container.querySelector('#ia-result-filter');
+    var sourceModalEl = container.querySelector('#ia-source-modal');
+    var sourceTitleEl = container.querySelector('#ia-source-title');
+    var sourceBodyEl = container.querySelector('#ia-source-body');
+    var sourceCopyBtnEl = container.querySelector('#ia-source-copy');
     var groupFilter = container.querySelector('#ia-group-filter');
+
+    var READ_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"'
+        + ' stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true">'
+        + '<path stroke-linecap="round" stroke-linejoin="round"'
+        + ' d="M9 12h6m-6 4h4m3 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414'
+        + 'a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>';
+    var TYPE_LABEL = { dbio: 'DBIO', service: 'Service', biz: 'Biz', batch: 'Batch' };
+    var SOURCE_ERROR_TITLE = { 400: '잘못된 요청', 404: '소스를 찾을 수 없음', 503: '원격 서버 연결 실패' };
+    var sourceCache = new Map();
+    var sourceReqId = 0;
+    var lastSourceText = '';
     var groupFilterBtn = container.querySelector('#ia-group-filter-btn');
     var groupFilterPanel = container.querySelector('#ia-group-filter-panel');
     var PLACEHOLDER = {
@@ -194,6 +222,95 @@
 
     typeSel.addEventListener('change', function () {
         searchInput.placeholder = PLACEHOLDER[typeSel.value];
+    });
+
+    function renderSourceStatus(msg) {
+        sourceBodyEl.innerHTML = '<p class="dm-source-status">' + escapeHtml(msg) + '</p>';
+    }
+
+    function renderSourceError(title, detail) {
+        sourceBodyEl.innerHTML = '<p class="dm-source-status dm-source-error"><strong>'
+            + escapeHtml(title) + '</strong>'
+            + (detail ? '<br><span>' + escapeHtml(detail) + '</span>' : '') + '</p>';
+    }
+
+    function renderSourceContent(entry) {
+        lastSourceText = entry.text;
+        if (!entry.text) {
+            sourceBodyEl.innerHTML = '<p class="dm-source-status">내용이 없습니다.</p>';
+            return;
+        }
+        var pre = document.createElement('pre');
+        pre.className = 'dm-source-code';
+        pre.textContent = entry.text;
+        sourceBodyEl.innerHTML = '';
+        sourceBodyEl.appendChild(pre);
+        if (entry.truncated) {
+            sourceBodyEl.insertAdjacentHTML('beforeend',
+                '<p class="dm-source-truncated">⚠ 파일이 너무 커 앞부분만 표시합니다.</p>');
+        }
+    }
+
+    function closeSourceModal() {
+        sourceModalEl.style.display = 'none';
+    }
+
+    async function openSourceModal(moduleType, fileId) {
+        sourceTitleEl.textContent = '[' + (TYPE_LABEL[moduleType] || moduleType) + '] ' + fileId;
+        sourceModalEl.style.display = 'flex';
+
+        var key = moduleType + ':' + fileId;
+        var cached = sourceCache.get(key);
+        if (cached) {
+            sourceReqId += 1;
+            renderSourceContent(cached);
+            return;
+        }
+
+        var reqId = ++sourceReqId;
+        renderSourceStatus('불러오는 중...');
+
+        try {
+            var res = await fetch('source/' + encodeURIComponent(moduleType) + '/' + encodeURIComponent(fileId));
+            var data = null;
+            try { data = await res.json(); } catch (_) {}
+            if (reqId !== sourceReqId) return;
+            if (!res.ok) {
+                var detail = data && typeof data.detail === 'string' ? data.detail
+                           : data ? JSON.stringify(data.detail)
+                           : 'HTTP ' + res.status + ' ' + (res.statusText || '');
+                renderSourceError(SOURCE_ERROR_TITLE[res.status] || '조회 실패', detail.trim());
+                return;
+            }
+            if (!data) { renderSourceError('조회 실패', '서버 응답을 해석할 수 없습니다.'); return; }
+            var entry = { text: data.content || '', truncated: !!data.truncated };
+            sourceCache.set(key, entry);
+            renderSourceContent(entry);
+        } catch (e) {
+            if (reqId !== sourceReqId) return;
+            renderSourceError('소스 조회 요청 실패', e.message);
+        }
+    }
+
+    container.querySelector('#ia-source-close').addEventListener('click', closeSourceModal);
+    sourceModalEl.addEventListener('mousedown', function (e) {
+        if (e.target === sourceModalEl) closeSourceModal();
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && sourceModalEl.style.display !== 'none') closeSourceModal();
+    });
+    sourceCopyBtnEl.addEventListener('click', function () {
+        if (!lastSourceText) { App.showToast('복사할 내용이 없습니다.'); return; }
+        App.copyToClipboard(lastSourceText, '소스가 클립보드에 복사되었습니다.');
+    });
+
+    resultsEl.addEventListener('click', function (e) {
+        var btn = e.target.closest('.ia-read-btn');
+        if (!btn) return;
+        e.stopPropagation();
+        var item = btn.closest('[data-type][data-id]');
+        if (!item) return;
+        openSourceModal(item.getAttribute('data-type'), item.getAttribute('data-id'));
     });
 
     function renderMessage(text) {
@@ -344,7 +461,7 @@
     }
 
     // DBIO 펼침 바디 안의 한 그룹(Service/Batch, 확장 불가) — 비어 있으면 "없음" 문구만 표시.
-    function renderCallerGroup(label, ids) {
+    function renderCallerGroup(label, moduleType, ids) {
         if (!ids || !ids.length) {
             return '<div class="ia-caller-group ia-caller-group-empty">' + escapeHtml(label) + ' 없음</div>';
         }
@@ -352,7 +469,12 @@
             <div class="ia-caller-group">
                 <div class="ia-caller-group-title">${escapeHtml(label)} <span class="count-badge">${ids.length}개</span></div>
                 <ul class="ia-caller-items">
-                    ${ids.map(function (id) { return '<li>' + escapeHtml(id) + '</li>'; }).join('')}
+                    ${ids.map(function (id) {
+                        return '<li data-type="' + escapeHtml(moduleType) + '" data-id="' + escapeHtml(id) + '">'
+                            + '<span>' + escapeHtml(id) + '</span>'
+                            + '<button type="button" class="ia-read-btn" title="소스 보기" aria-label="소스 보기">' + READ_ICON + '</button>'
+                            + '</li>';
+                    }).join('')}
                 </ul>
             </div>
         `;
@@ -363,11 +485,12 @@
         var li = document.createElement('li');
         li.className = 'ia-dbio-item';
         li.innerHTML = `
-            <div class="ia-dbio-header">
+            <div class="ia-dbio-header" data-type="${escapeHtml(refType)}" data-id="${escapeHtml(refId)}">
                 <button type="button" class="ia-dbio-toggle" aria-expanded="false">
                     <span class="ia-dbio-chevron">▶</span>
                     <span class="ia-dbio-id">${escapeHtml(refId)}</span>
                 </button>
+                <button type="button" class="ia-read-btn" title="소스 보기" aria-label="소스 보기">${READ_ICON}</button>
                 <button type="button" class="copy-btn" title="ID 복사">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke-width="2"></rect>
@@ -454,9 +577,9 @@
             })
             .then(function (data) {
                 body.dataset.loaded = 'true';
-                body.innerHTML = renderCallerGroup('Service', data.services);
+                body.innerHTML = renderCallerGroup('Service', 'service', data.services);
                 body.appendChild(renderBizGroup(data.bizs, ancestors));
-                body.insertAdjacentHTML('beforeend', renderCallerGroup('Batch', data.batches));
+                body.insertAdjacentHTML('beforeend', renderCallerGroup('Batch', 'batch', data.batches));
 
                 data.services.forEach(function (id) { agg.services.add(id); });
                 data.bizs.forEach(function (id) { agg.bizs.add(id); });
@@ -505,6 +628,7 @@
 
         resetAggregate();
         resultFilterInput.value = '';
+        sourceCache.clear();
 
         // table만 1차 조회(테이블 → DBIO)가 필요하고, dbio/biz는 존재 확인 후 루트로 렌더.
         if (typeSel.value !== 'table') {
