@@ -51,7 +51,7 @@ logger = logging.getLogger("no_gada.main")
 COMPILE_ROOT = f"{PROFRAME_ROOT}/compile"
 
 
-# 리소스그룹 데이터를 가져와서 세션 메모리에 올림
+# 리소스그룹 목록을 SSH로 1회 로드해 app.state에 올린다 — 요청마다 SSH접속하는 낭비를 피하기 위함
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     gen = default_command_runner()
