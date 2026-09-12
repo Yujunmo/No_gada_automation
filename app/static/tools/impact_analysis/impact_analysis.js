@@ -6,12 +6,13 @@
         <div class="header">
             <div class="badge">영향도 분석 도구</div>
             <h1>Impact Analysis</h1>
-            <p>테이블명 또는 비즈모듈명을 입력하면, 테이블은 그 테이블을 참조하는 DBIO를, 비즈모듈은 곧바로 그 모듈을 찾습니다.<br>DBIO·비즈모듈을 펼치면 연결된 비즈·서비스·배치 모듈을 조회하고, 비즈모듈은 다시 펼쳐 그 비즈를 부르는 상위 모듈을 계속 따라갈 수 있습니다(서비스·배치는 항상 최상위).</p>
+            <p>테이블명·DBIO ID·비즈모듈명 중 하나를 입력하면, 테이블은 그 테이블을 참조하는 DBIO를 찾고, DBIO·비즈모듈은 입력한 것 자체가 시작점이 됩니다.<br>DBIO·비즈모듈을 펼치면 연결된 비즈·서비스·배치 모듈을 조회하고, 비즈모듈은 다시 펼쳐 그 비즈를 부르는 상위 모듈을 계속 따라갈 수 있습니다(서비스·배치는 항상 최상위).</p>
         </div>
 
         <form class="ia-search-bar" id="ia-search-form">
             <select id="ia-target-type" class="ia-search-select">
                 <option value="table">Table</option>
+                <option value="dbio">DBIO</option>
                 <option value="biz">Biz</option>
             </select>
             <input type="text" id="ia-search-input" placeholder="테이블명을 입력하세요 (예: PFO_FUND_BS)" autocomplete="off">
@@ -59,6 +60,7 @@
     var groupFilterPanel = container.querySelector('#ia-group-filter-panel');
     var PLACEHOLDER = {
         table: '테이블명을 입력하세요 (예: PFO_FUND_BS)',
+        dbio: 'DBIO ID를 입력하세요 (예: PFO_STCK_MA_DS200)',
         biz: '비즈모듈명을 입력하세요 (예: MZPFM_FundInfoSave)',
     };
     // 백엔드 ResourceGroup(app/common/proframe/types.py)이 단일 소스 — 페이지 로드 시
@@ -371,13 +373,15 @@
         renderSummary();
     }
 
-    // 비즈모듈 검색: 입력한 ID 자체가 이미 루트라 DBIO처럼 1차 조회가 따로 없다 —
-    // 바로 펼칠 수 있는 단일 항목으로 보여주고, 펼치면 loadCallers("biz", id, ...)가 호출된다.
-    function renderBizRoot(id) {
+    // DBIO/비즈모듈 검색: 입력한 ID 자체가 이미 루트라 테이블 검색처럼 1차 조회가 따로 없다 —
+    // 바로 펼칠 수 있는 단일 항목으로 보여주고, 펼치면 loadCallers(refType, id, ...)가 호출된다.
+    // 루트는 "질문의 대상"이지 영향받는 항목이 아니므로 집계(agg)에 넣지 않는다
+    // (테이블 검색으로 찾아낸 DBIO들은 영향 범위라 renderDbios에서 집계에 넣는 것과 대비).
+    function renderRoot(refType, id) {
         resultsEl.innerHTML = '';
         var ul = document.createElement('ul');
         ul.className = 'ia-dbio-list';
-        ul.appendChild(makeExpandableItem('biz', id, []));
+        ul.appendChild(makeExpandableItem(refType, id, []));
         resultsEl.appendChild(ul);
     }
 
@@ -389,8 +393,9 @@
 
         resetAggregate();
 
-        if (typeSel.value === 'biz') {
-            renderBizRoot(query);
+        // table만 1차 조회(테이블 → DBIO)가 필요하고, dbio/biz는 입력 자체가 루트다.
+        if (typeSel.value !== 'table') {
+            renderRoot(typeSel.value, query);
             return;
         }
 
